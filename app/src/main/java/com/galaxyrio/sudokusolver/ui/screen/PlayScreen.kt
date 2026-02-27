@@ -20,7 +20,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.galaxyrio.sudokusolver.ui.screen.play.SudokuGameScreen
 
 
 enum class Difficulty {
@@ -28,33 +27,9 @@ enum class Difficulty {
 }
 
 @Composable
-fun PlayScreen(modifier: Modifier = Modifier) {
-    var isPlaying by rememberSaveable { mutableStateOf(false) }
-    var difficulty by rememberSaveable { mutableStateOf(Difficulty.MEDIUM) }
-
-    if (isPlaying) {
-        SudokuGameScreen(
-            difficulty = difficulty,
-            onBack = { isPlaying = false },
-            modifier = modifier
-        )
-    } else {
-        PlayMenuScreen(
-            modifier = modifier,
-            initialDifficulty = difficulty,
-            onStartGame = { selectedDifficulty ->
-                difficulty = selectedDifficulty
-                isPlaying = true
-            },
-            onContinueGame = { isPlaying = true }
-        )
-    }
-}
-
-@Composable
-private fun PlayMenuScreen(
+fun PlayMenuScreen(
     modifier: Modifier = Modifier,
-    initialDifficulty: Difficulty,
+    initialDifficulty: Difficulty = Difficulty.MEDIUM,
     onStartGame: (Difficulty) -> Unit,
     onContinueGame: () -> Unit
 ) {

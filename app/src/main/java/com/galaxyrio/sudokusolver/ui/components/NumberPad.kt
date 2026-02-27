@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+
 @Composable
 fun NumberPad(
     modifier: Modifier = Modifier,
@@ -27,7 +28,7 @@ fun NumberPad(
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         val rows = (1..9).chunked(3) // Split 1..9 into [[1,2,3], [4,5,6], [7,8,9]]
@@ -48,6 +49,7 @@ fun NumberPad(
     }
 }
 
+
 @Composable
 fun NumberButton(
     number: Int,
@@ -57,7 +59,7 @@ fun NumberButton(
 ) {
     Box(
         modifier = modifier
-            .size(60.dp)
+            .size(75.dp)
             .clip(CircleShape)
             .background(
                 if (isSelected) MaterialTheme.colorScheme.primary

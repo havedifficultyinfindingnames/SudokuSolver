@@ -24,8 +24,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import com.galaxyrio.sudokusolver.ui.theme.SudokuSolverTheme
 import com.galaxyrio.sudokusolver.ui.screen.InfoScreen
-import com.galaxyrio.sudokusolver.ui.screen.PlayScreen
+import com.galaxyrio.sudokusolver.ui.screen.PlayMenuScreen
+import com.galaxyrio.sudokusolver.ui.screen.play.SudokuGameScreen
 import com.galaxyrio.sudokusolver.ui.screen.SettingsScreen
+import com.galaxyrio.sudokusolver.ui.screen.Difficulty
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -43,29 +45,47 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun SudokuSolverApp() {
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.PLAY) }
+    var isPlaying by rememberSaveable { mutableStateOf(false) }
+    var gameDifficulty by rememberSaveable { mutableStateOf(Difficulty.MEDIUM) }
 
-    NavigationSuiteScaffold(
-        navigationSuiteItems = {
-            AppDestinations.entries.forEach {
-                item(
-                    icon = {
-                        Icon(
-                            it.icon,
-                            contentDescription = it.label
-                        )
-                    },
-                    label = { Text(it.label) },
-                    selected = it == currentDestination,
-                    onClick = { currentDestination = it }
-                )
+    if (isPlaying) {
+        SudokuGameScreen(
+            difficulty = gameDifficulty,
+            onBack = { isPlaying = false },
+            modifier = Modifier.fillMaxSize()
+        )
+    } else {
+        NavigationSuiteScaffold(
+            navigationSuiteItems = {
+                AppDestinations.entries.forEach {
+                    item(
+                        icon = {
+                            Icon(
+                                it.icon,
+                                contentDescription = it.label
+                            )
+                        },
+                        label = { Text(it.label) },
+                        selected = it == currentDestination,
+                        onClick = { currentDestination = it }
+                    )
+                }
             }
-        }
-    ) {
-        val modifier = Modifier.fillMaxSize()
-        when (currentDestination) {
-            AppDestinations.INFO -> InfoScreen(modifier)
-            AppDestinations.PLAY -> PlayScreen(modifier)
-            AppDestinations.SETTINGS -> SettingsScreen(modifier)
+        ) {
+            val modifier = Modifier.fillMaxSize()
+            when (currentDestination) {
+                AppDestinations.INFO -> InfoScreen(modifier)
+                AppDestinations.PLAY -> PlayMenuScreen(
+                    modifier = modifier,
+                    initialDifficulty = gameDifficulty,
+                    onStartGame = { selectedDifficulty ->
+                        gameDifficulty = selectedDifficulty
+                        isPlaying = true
+                    },
+                    onContinueGame = { isPlaying = true }
+                )
+                AppDestinations.SETTINGS -> SettingsScreen(modifier)
+            }
         }
     }
 }
