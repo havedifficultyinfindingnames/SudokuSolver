@@ -1,20 +1,19 @@
 package com.galaxyrio.sudokusolver.ui.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -57,21 +56,23 @@ fun NumberButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Box(
-        modifier = modifier
-            .size(75.dp)
-            .clip(CircleShape)
-            .background(
-                if (isSelected) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.secondaryContainer
-            )
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
+    val containerColor = if (isSelected) MaterialTheme.colorScheme.primary
+        else MaterialTheme.colorScheme.secondaryContainer
+    val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary
+        else MaterialTheme.colorScheme.onSecondaryContainer
+
+    Button(
+        onClick = onClick,
+        modifier = modifier.size(75.dp),
+        shape = CircleShape,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = containerColor,
+            contentColor = contentColor
+        ),
+        contentPadding = PaddingValues(0.dp)
     ) {
         Text(
             text = number.toString(),
-            color = if (isSelected) MaterialTheme.colorScheme.onPrimary
-                   else MaterialTheme.colorScheme.onSecondaryContainer,
             fontSize = 30.sp,
             fontWeight = FontWeight.Bold
         )
