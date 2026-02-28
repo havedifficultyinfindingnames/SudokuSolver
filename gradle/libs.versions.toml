@@ -8,10 +8,8 @@ lifecycleRuntimeKtx = "2.6.1"
 activityCompose = "1.8.0"
 kotlin = "2.0.21"
 composeBom = "2025.07.00"
-scala = "3.3.3"
 
 [libraries]
-scala-library = { group = "org.scala-lang", name = "scala3-library_3", version.ref = "scala" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }

@@ -16,13 +16,21 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.material3.BottomSheetScaffold
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.SheetValue
+
+import androidx.compose.material3.rememberBottomSheetScaffoldState
+import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+
 import androidx.compose.ui.unit.dp
 import com.galaxyrio.sudokusolver.game.Sudoku
 import com.galaxyrio.sudokusolver.game.generator.SudokuGenerator
@@ -31,7 +39,9 @@ import com.galaxyrio.sudokusolver.ui.components.GameTopBar
 import com.galaxyrio.sudokusolver.ui.components.NumberPad
 import com.galaxyrio.sudokusolver.ui.components.SudokuBoard
 import com.galaxyrio.sudokusolver.ui.screen.Difficulty
+import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 fun SudokuGameScreen(
@@ -42,7 +52,6 @@ fun SudokuGameScreen(
     BackHandler(onBack = onBack)
 
     // Initialize the board using the generator
-    // ...existing code...
     var sudoku by remember(difficulty) {
         val clues = when (difficulty) {
             Difficulty.EASY -> 40
@@ -61,7 +70,13 @@ fun SudokuGameScreen(
     val history = remember { mutableListOf<Sudoku>() }
 
     // Hint state
-    var showHint by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val scaffoldState = rememberBottomSheetScaffoldState(
+        bottomSheetState = rememberStandardBottomSheetState(
+            initialValue = SheetValue.Hidden,
+            skipHiddenState = false
+        )
+    )
 
     fun updateSudoku(newSudoku: Sudoku) {
         history.add(sudoku)
@@ -74,103 +89,119 @@ fun SudokuGameScreen(
         }
     }
 
-    // ...existing code...
     // Interaction source for the background click to avoid ripple effect if desired
     val interactionSource = remember { MutableInteractionSource() }
 
-    BoxWithConstraints(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.TopCenter
-    ) {
-        val screenHeight = maxHeight
-        val screenWidth = maxWidth
-
-        val topBarHeight = screenHeight / 7
-        val boardHeight = screenWidth
-
-        Column(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            // 1. Top Bar Area
-            GameTopBar(
-                title = "Sudoku - ${difficulty.name}",
+    BottomSheetScaffold(
+        scaffoldState = scaffoldState,
+        sheetContent = {
+            com.galaxyrio.sudokusolver.ui.components.GameHintPanel(
+                onBackClick = {
+                    scope.launch { scaffoldState.bottomSheetState.hide() }
+                },
+                onApplyClick = {
+                    /* Apply Hint */
+                    scope.launch { scaffoldState.bottomSheetState.hide() }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(topBarHeight)
-                    .padding(top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding())
+                    .height(300.dp)
             )
+        },
+        sheetPeekHeight = 0.dp,
+        // Make the scrim transparent to allow interaction with the content behind if desired?
+        // Standard bottom sheet usually pushes content up or overlays without scrim blocking interaction if not modal.
+        // However, BottomSheetScaffold creates a persistent bottom sheet.
+        // If we want it to behave like a standard sheet that doesn't block interaction, we don't strictly need to do anything special,
+        // but default implementation might have a scrim or not depending on Material3 version.
+        // Actually BottomSheetScaffold in M3 doesn't have a scrim by default for standard sheets, it just overlays.
+        modifier = modifier.fillMaxSize()
+    ) { paddingValues ->
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            val screenHeight = maxHeight
+            val screenWidth = maxWidth
 
-            // 2. Board Area
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(boardHeight)
-                    .padding(16.dp), // Check if padding is desired inside the "Board Width" constraint or outside?
-                    // User said "Board area height is screen width". Usually this implies square aspect ratio.
-                    // If we add padding, the internal board might be smaller.
-                    // Let's keep a small padding for aesthetics but ensure the container is consistent.
-                contentAlignment = Alignment.Center
-            ) {
-                 SudokuBoard(
-                    sudoku = sudoku,
-                    onCellClick = { row, col ->
-                        selectedRow = row
-                        selectedCol = col
+            val topBarHeight = screenHeight / 8
+            val boardHeight = screenWidth-32.dp
 
-                        // If a number is selected in the pad, try to fill it
-                        val currentCell = sudoku.getCell(row, col)
-                        if (!currentCell.isFixed && selectedNumber != null) {
-                            if (isNoteMode) {
-                                if (currentCell.value == 0) {
-                                    updateSudoku(sudoku.toggleCandidate(row, col, selectedNumber!!))
-                                }
-                            } else {
-                                val newValue = selectedNumber!!
-                                // Only update if value is changing
-                                if (currentCell.value != newValue) {
-                                    updateSudoku(sudoku.setCell(row, col, newValue))
-                                }
-                            }
-                        }
-                    },
-                    selectedRow = selectedRow,
-                    selectedCol = selectedCol,
-                    highlightNumber = selectedNumber,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-
-            // Remaining space for Number Pad and Tool Bar
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .clickable(
-                        interactionSource = interactionSource,
-                        indication = null
-                    ) {
-                         // Deselect cell when clicking empty space
-                         selectedRow = null
-                         selectedCol = null
-                    },
-                verticalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween,
-                horizontalAlignment = Alignment.CenterHorizontally
+                modifier = Modifier.fillMaxSize()
             ) {
-                // 3. Middle Area: Number Pad OR Hint Panel
+                // 1. Top Bar Area
+                GameTopBar(
+                    title = "Sudoku - ${difficulty.name}",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(topBarHeight)
+                        .padding(top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding())
+                )
+
+                // 2. Board Area
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f), // Take available space
+                        .height(boardHeight)
+                        .padding(16.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (showHint) {
-                         com.galaxyrio.sudokusolver.ui.components.GameHintPanel(
-                            onBackClick = { showHint = false },
-                            onApplyClick = { /* Apply Hint */ },
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    } else {
-                         NumberPad(
+                    SudokuBoard(
+                        sudoku = sudoku,
+                        onCellClick = { row, col ->
+                            selectedRow = row
+                            selectedCol = col
+
+                            // If a number is selected in the pad, try to fill it
+                            val currentCell = sudoku.getCell(row, col)
+                            if (!currentCell.isFixed && selectedNumber != null) {
+                                if (isNoteMode) {
+                                    if (currentCell.value == 0) {
+                                        updateSudoku(sudoku.toggleCandidate(row, col, selectedNumber!!))
+                                    }
+                                } else {
+                                    val newValue = selectedNumber!!
+                                    // Only update if value is changing
+                                    if (currentCell.value != newValue) {
+                                        updateSudoku(sudoku.setCell(row, col, newValue))
+                                    }
+                                }
+                            }
+                        },
+                        selectedRow = selectedRow,
+                        selectedCol = selectedCol,
+                        highlightNumber = selectedNumber,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+
+                // Remaining space for Number Pad and Tool Bar
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .clickable(
+                            interactionSource = interactionSource,
+                            indication = null
+                        ) {
+                            // Deselect cell when clicking empty space
+                            selectedRow = null
+                            selectedCol = null
+                        },
+                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // 3. Middle Area: Number Pad
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f), // Take available space
+                        contentAlignment = Alignment.Center
+                    ) {
+                        NumberPad(
                             selectedNumber = selectedNumber,
                             onNumberClick = { number ->
                                 // Logic update: If a cell is selected (Cell First Mode), fill it and Clear selection
@@ -200,41 +231,44 @@ fun SudokuGameScreen(
                             }
                         )
                     }
-                }
 
-                // 4. Tool Bar Area (Always visible)
-                Column(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    GameToolbar(
-                        isNoteMode = isNoteMode,
-                        isHintActive = showHint,
-                        onUndoClick = { undo() },
-                        onDeleteClick = {
-                            if (selectedRow != null && selectedCol != null) {
-                                val row = selectedRow!!
-                                val col = selectedCol!!
-                                val currentCell = sudoku.getCell(row, col)
+                    // 4. Tool Bar Area
+                    Column(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        GameToolbar(
+                            isNoteMode = isNoteMode,
+                            onUndoClick = { undo() },
+                            onDeleteClick = {
+                                if (selectedRow != null && selectedCol != null) {
+                                    val row = selectedRow!!
+                                    val col = selectedCol!!
+                                    val currentCell = sudoku.getCell(row, col)
 
-                                if (!currentCell.isFixed) {
-                                    if (currentCell.value != 0 || currentCell.candidates.isNotEmpty()) {
-                                        updateSudoku(sudoku.setCell(row, col, 0))
+                                    if (!currentCell.isFixed) {
+                                        if (currentCell.value != 0 || currentCell.candidates.isNotEmpty()) {
+                                            updateSudoku(sudoku.setCell(row, col, 0))
+                                        }
                                     }
                                 }
+                            },
+                            onNoteModeClick = { isNoteMode = !isNoteMode },
+                            onAutoCandidatesClick = {
+                                updateSudoku(
+                                    com.galaxyrio.sudokusolver.game.generator.CandidateCalculator.calculateAllCandidates(sudoku)
+                                )
+                            },
+                            onHintClick = {
+                                scope.launch {
+                                    scaffoldState.bottomSheetState.expand()
+                                }
                             }
-                        },
-                        onNoteModeClick = { isNoteMode = !isNoteMode },
-                        onAutoCandidatesClick = {
-                            updateSudoku(
-                                com.galaxyrio.sudokusolver.game.generator.CandidateCalculator.calculateAllCandidates(sudoku)
-                            )
-                        },
-                        onHintClick = { showHint = !showHint }
-                    )
+                        )
 
-                    // Bottom spacing + Gesture inset
-                    val bottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-                    Spacer(modifier = Modifier.height(16.dp + bottomPadding))
+                        // Bottom spacing + Gesture inset
+                        val bottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                        Spacer(modifier = Modifier.height(24.dp + bottomPadding))
+                    }
                 }
             }
 

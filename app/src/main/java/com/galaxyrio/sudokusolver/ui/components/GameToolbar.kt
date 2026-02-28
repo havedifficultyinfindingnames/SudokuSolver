@@ -1,5 +1,8 @@
 package com.galaxyrio.sudokusolver.ui.components
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,15 +19,17 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 
 @Composable
 fun GameToolbar(
     modifier: Modifier = Modifier,
     isNoteMode: Boolean,
-    isHintActive: Boolean,
     onUndoClick: () -> Unit,
     onDeleteClick: () -> Unit,
     onNoteModeClick: () -> Unit,
@@ -36,13 +41,10 @@ fun GameToolbar(
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
         // Undo Button
-        IconButton(
+        ToolbarButton(
             onClick = onUndoClick,
-            colors = IconButtonDefaults.iconButtonColors(
-                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-            ),
-            modifier = Modifier.size(50.dp).clip(CircleShape)
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.Undo,
@@ -52,13 +54,10 @@ fun GameToolbar(
         }
 
         // Delete Button
-        IconButton(
+        ToolbarButton(
             onClick = onDeleteClick,
-            colors = IconButtonDefaults.iconButtonColors(
-                containerColor = MaterialTheme.colorScheme.errorContainer,
-                contentColor = MaterialTheme.colorScheme.onErrorContainer
-            ),
-            modifier = Modifier.size(50.dp).clip(CircleShape)
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.Backspace,
@@ -68,13 +67,10 @@ fun GameToolbar(
         }
 
         // Note Mode Button
-        IconButton(
+        ToolbarButton(
             onClick = onNoteModeClick,
-            colors = IconButtonDefaults.iconButtonColors(
-                containerColor = if (isNoteMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = if (isNoteMode) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-            ),
-            modifier = Modifier.size(50.dp).clip(CircleShape)
+            containerColor = if (isNoteMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = if (isNoteMode) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
         ) {
             Icon(
                 imageVector = Icons.Default.Edit,
@@ -84,13 +80,10 @@ fun GameToolbar(
         }
 
         // Auto Candidates Button
-        IconButton(
+        ToolbarButton(
             onClick = onAutoCandidatesClick,
-            colors = IconButtonDefaults.iconButtonColors(
-                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                contentColor = MaterialTheme.colorScheme.onTertiaryContainer
-            ),
-            modifier = Modifier.size(50.dp).clip(CircleShape)
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
         ) {
             Icon(
                 imageVector = Icons.Default.AutoAwesome,
@@ -100,13 +93,10 @@ fun GameToolbar(
         }
 
         // Hint Button
-        IconButton(
+        ToolbarButton(
             onClick = onHintClick,
-            colors = IconButtonDefaults.iconButtonColors(
-                containerColor = if (isHintActive) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = if (isHintActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-            ),
-            modifier = Modifier.size(50.dp).clip(CircleShape)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         ) {
             Icon(
                 imageVector = Icons.Default.Lightbulb,
@@ -117,3 +107,35 @@ fun GameToolbar(
     }
 }
 
+@Composable
+fun ToolbarButton(
+    onClick: () -> Unit,
+    containerColor: androidx.compose.ui.graphics.Color,
+    contentColor: androidx.compose.ui.graphics.Color,
+    content: @Composable () -> Unit
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.8f else 1f,
+        label = "scaleAnimation"
+    )
+
+    IconButton(
+        onClick = onClick,
+        colors = IconButtonDefaults.iconButtonColors(
+            containerColor = containerColor,
+            contentColor = contentColor
+        ),
+        interactionSource = interactionSource,
+        modifier = Modifier
+            .size(50.dp)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .clip(CircleShape)
+    ) {
+        content()
+    }
+}
