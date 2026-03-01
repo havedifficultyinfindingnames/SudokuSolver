@@ -152,8 +152,13 @@ fun SudokuGameScreen(
                     SudokuBoard(
                         sudoku = sudoku,
                         onCellClick = { row, col ->
-                            selectedRow = row
-                            selectedCol = col
+                            if (selectedRow == row && selectedCol == col) {
+                                selectedRow = null
+                                selectedCol = null
+                            } else {
+                                selectedRow = row
+                                selectedCol = col
+                            }
 
                             // If a number is selected in the pad, try to fill it
                             val currentCell = sudoku.getCell(row, col)

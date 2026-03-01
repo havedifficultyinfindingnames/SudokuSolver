@@ -128,8 +128,8 @@ fun SudokuCell(
     isValueHighlighted: Boolean = false,
 ) {
     val backgroundColor = when {
-        isSelected -> MaterialTheme.colorScheme.primaryContainer
-        isValueHighlighted -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+        isSelected -> MaterialTheme.colorScheme.secondaryContainer
+        isValueHighlighted -> MaterialTheme.colorScheme.secondaryContainer
         else -> MaterialTheme.colorScheme.surface
     }
 
