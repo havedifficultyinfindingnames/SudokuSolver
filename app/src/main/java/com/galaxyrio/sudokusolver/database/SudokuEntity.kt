@@ -7,7 +7,8 @@ import com.galaxyrio.sudokusolver.ui.screen.Difficulty
 
 @Entity(tableName = "games")
 data class SudokuEntity(
-    @PrimaryKey
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
     val difficulty: Difficulty,
     val sudoku: Sudoku,
     val lastPlayed: Long = System.currentTimeMillis()

@@ -8,13 +8,16 @@ import com.galaxyrio.sudokusolver.ui.screen.Difficulty
 
 @Dao
 interface SudokuDao {
-    @Query("SELECT * FROM games WHERE difficulty = :difficulty")
-    suspend fun getGame(difficulty: Difficulty): SudokuEntity?
+    @Query("SELECT * FROM games ORDER BY lastPlayed DESC")
+    suspend fun getAllGames(): List<SudokuEntity>
+
+    @Query("SELECT * FROM games WHERE id = :id")
+    suspend fun getGame(id: Long): SudokuEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun saveGame(game: SudokuEntity)
+    suspend fun saveGame(game: SudokuEntity): Long
 
-    @Query("DELETE FROM games WHERE difficulty = :difficulty")
-    suspend fun deleteGame(difficulty: Difficulty)
+    @Query("DELETE FROM games WHERE id = :id")
+    suspend fun deleteGame(id: Long)
 }
 

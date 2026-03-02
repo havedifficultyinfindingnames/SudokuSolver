@@ -57,29 +57,49 @@ import kotlinx.coroutines.withContext
 @Composable
 fun SudokuGameScreen(
     difficulty: Difficulty,
+    gameId: Long? = null,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    BackHandler(onBack = {
-        // Before backing out, save explicitly? (Already saved on update)
-        onBack()
-    })
-
     val context = LocalContext.current
     val dao = remember { AppDatabase.getDatabase(context).sudokuDao() }
     val scope = rememberCoroutineScope()
+    var currentGameId by remember { mutableStateOf(gameId) }
+
+    // Hint state
+    val scaffoldState = rememberBottomSheetScaffoldState(
+        bottomSheetState = rememberStandardBottomSheetState(
+            initialValue = SheetValue.Hidden,
+            skipHiddenState = false
+        )
+    )
+
+    BackHandler(enabled = true) {
+        if (scaffoldState.bottomSheetState.currentValue == SheetValue.Expanded) {
+            scope.launch { scaffoldState.bottomSheetState.hide() }
+        } else {
+            onBack()
+        }
+    }
 
     // Initialize the board using the generator
     // We use a nullable state to show loading until we check the DB
     var sudokuState by remember { mutableStateOf<Sudoku?>(null) }
 
-    LaunchedEffect(difficulty) {
-        // Check if there is a saved game for this difficulty
+    LaunchedEffect(key1 = gameId, key2 = difficulty) {
         withContext(Dispatchers.IO) {
-            val savedGame = dao.getGame(difficulty)
-            if (savedGame != null) {
-                 sudokuState = savedGame.sudoku
+            var loadedGame: Sudoku? = null
+            if (gameId != null) {
+                val savedGame = dao.getGame(gameId)
+                if (savedGame != null) {
+                    loadedGame = savedGame.sudoku
+                }
+            }
+
+            if (loadedGame != null) {
+                sudokuState = loadedGame
             } else {
+                // New Game
                 val clues = when (difficulty) {
                     Difficulty.EASY -> 40
                     Difficulty.MEDIUM -> 30
@@ -87,9 +107,14 @@ fun SudokuGameScreen(
                 }
                 val newGame = SudokuGenerator().generate(clues)
                 sudokuState = newGame
-                // Save immediately so "Continue" works if I exit right away?
-                // Probably better to save only on move, but saving initial state is safer.
-                dao.saveGame(SudokuEntity(difficulty, newGame))
+                // Save immediately to get an ID
+                val newId = dao.saveGame(
+                    SudokuEntity(
+                        difficulty = difficulty,
+                        sudoku = newGame
+                    )
+                )
+                currentGameId = newId
             }
         }
     }
@@ -114,12 +139,7 @@ fun SudokuGameScreen(
 
     // Hint state
     // Scope is already defined above
-    val scaffoldState = rememberBottomSheetScaffoldState(
-        bottomSheetState = rememberStandardBottomSheetState(
-            initialValue = SheetValue.Hidden,
-            skipHiddenState = false
-        )
-    )
+    // ScaffoldState moved up for BackHandler access
 
     fun updateSudoku(newSudoku: Sudoku) {
         history.add(sudoku)
@@ -127,17 +147,26 @@ fun SudokuGameScreen(
 
         // Save to DB asynchronously
         scope.launch(Dispatchers.IO) {
-             dao.saveGame(SudokuEntity(difficulty = difficulty, sudoku = newSudoku))
+            currentGameId?.let { id ->
+                dao.saveGame(
+                    SudokuEntity(
+                        id = id,
+                        difficulty = difficulty,
+                        sudoku = newSudoku
+                    )
+                )
+            }
         }
 
         // Check win condition
         val isFull = newSudoku.cells.none { it.value == 0 }
         if (isFull && SudokuValidator.isBoardValid(newSudoku)) {
              showWinDialog = true
-             // Clear saved game on win? Or keep it as solved?
-             // Usually cleared so next time it starts fresh.
+             // Clear saved game on win
              scope.launch(Dispatchers.IO) {
-                 dao.deleteGame(difficulty)
+                 currentGameId?.let { id ->
+                     dao.deleteGame(id)
+                 }
              }
         }
     }
@@ -164,16 +193,10 @@ fun SudokuGameScreen(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(300.dp)
+                    .height(360.dp)
             )
         },
         sheetPeekHeight = 0.dp,
-        // Make the scrim transparent to allow interaction with the content behind if desired?
-        // Standard bottom sheet usually pushes content up or overlays without scrim blocking interaction if not modal.
-        // However, BottomSheetScaffold creates a persistent bottom sheet.
-        // If we want it to behave like a standard sheet that doesn't block interaction, we don't strictly need to do anything special,
-        // but default implementation might have a scrim or not depending on Material3 version.
-        // Actually BottomSheetScaffold in M3 doesn't have a scrim by default for standard sheets, it just overlays.
         modifier = modifier.fillMaxSize()
     ) { paddingValues ->
         if (showWinDialog) {

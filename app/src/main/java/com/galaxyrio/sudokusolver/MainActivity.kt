@@ -31,10 +31,6 @@ import com.galaxyrio.sudokusolver.ui.screen.PlayMenuScreen
 import com.galaxyrio.sudokusolver.ui.screen.play.SudokuGameScreen
 import com.galaxyrio.sudokusolver.ui.screen.SettingsScreen
 import com.galaxyrio.sudokusolver.ui.screen.Difficulty
-import com.galaxyrio.sudokusolver.database.AppDatabase
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -54,14 +50,14 @@ fun SudokuSolverApp() {
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.PLAY) }
     var isPlaying by rememberSaveable { mutableStateOf(false) }
     var gameDifficulty by rememberSaveable { mutableStateOf(Difficulty.MEDIUM) }
+    var selectedGameId: Long? by rememberSaveable { mutableStateOf(null) }
 
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val dao = remember { AppDatabase.getDatabase(context).sudokuDao() }
 
     if (isPlaying) {
         SudokuGameScreen(
             difficulty = gameDifficulty,
+            gameId = selectedGameId,
             onBack = { isPlaying = false },
             modifier = Modifier.fillMaxSize()
         )
@@ -91,15 +87,12 @@ fun SudokuSolverApp() {
                     initialDifficulty = gameDifficulty,
                     onStartGame = { selectedDifficulty ->
                         gameDifficulty = selectedDifficulty
-                        // Delete any existing game for this difficulty before starting
-                        scope.launch {
-                            withContext(Dispatchers.IO) {
-                                dao.deleteGame(selectedDifficulty)
-                            }
-                            isPlaying = true
-                        }
+                        selectedGameId = null // New game
+                        isPlaying = true
                     },
-                    onContinueGame = {
+                    onContinueGame = { gameId ->
+                        // gameId string needs to be parsed to Long
+                        selectedGameId = gameId.toLongOrNull()
                         isPlaying = true
                     }
                 )
