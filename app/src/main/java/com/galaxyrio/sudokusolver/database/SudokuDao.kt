@@ -5,11 +5,12 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.galaxyrio.sudokusolver.ui.screen.Difficulty
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface SudokuDao {
     @Query("SELECT * FROM games ORDER BY lastPlayed DESC")
-    suspend fun getAllGames(): List<SudokuEntity>
+    fun getAllGames(): Flow<List<SudokuEntity>>
 
     @Query("SELECT * FROM games WHERE id = :id")
     suspend fun getGame(id: Long): SudokuEntity?
@@ -20,4 +21,3 @@ interface SudokuDao {
     @Query("DELETE FROM games WHERE id = :id")
     suspend fun deleteGame(id: Long)
 }
-

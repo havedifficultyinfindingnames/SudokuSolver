@@ -17,17 +17,20 @@ abstract class AppDatabase : RoomDatabase() {
 
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
+                val instance = INSTANCE
+                if (instance != null) {
+                    return instance
+                }
+                val newInstance = Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
                     "sudoku_database"
                 )
                 .fallbackToDestructiveMigration()
                 .build()
-                INSTANCE = instance
-                instance
+                INSTANCE = newInstance
+                newInstance
             }
         }
     }
 }
-

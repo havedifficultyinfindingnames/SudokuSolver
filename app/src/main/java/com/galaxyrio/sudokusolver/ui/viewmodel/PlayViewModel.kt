@@ -5,12 +5,11 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.galaxyrio.sudokusolver.database.AppDatabase
 import com.galaxyrio.sudokusolver.database.SudokuEntity
-import com.galaxyrio.sudokusolver.ui.screen.Difficulty
 import com.galaxyrio.sudokusolver.ui.screen.SavedGame
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -18,17 +17,9 @@ import java.util.Locale
 class PlayViewModel(application: Application) : AndroidViewModel(application) {
     private val sudokuDao = AppDatabase.getDatabase(application).sudokuDao()
 
-    private val _savedGames = MutableStateFlow<List<SavedGame>>(emptyList())
-    val savedGames: StateFlow<List<SavedGame>> = _savedGames.asStateFlow()
-
-    init {
-        loadSavedGames()
-    }
-
-    fun loadSavedGames() {
-        viewModelScope.launch {
-            val entities = sudokuDao.getAllGames()
-            val games = entities.map { entity ->
+    val savedGames: StateFlow<List<SavedGame>> = sudokuDao.getAllGames()
+        .map { entities ->
+            entities.map { entity ->
                 SavedGame(
                     id = entity.id.toString(),
                     date = formatLastPlayed(entity.lastPlayed),
@@ -36,9 +27,12 @@ class PlayViewModel(application: Application) : AndroidViewModel(application) {
                     completionPercentage = calculateCompletion(entity)
                 )
             }
-            _savedGames.value = games
         }
-    }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
 
     private fun formatLastPlayed(timestamp: Long): String {
         val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
