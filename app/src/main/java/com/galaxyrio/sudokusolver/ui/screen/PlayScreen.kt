@@ -23,16 +23,17 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -68,6 +69,10 @@ fun PlayMenuScreen(
     // Real state for existing game
     val savedGames by viewModel.savedGames.collectAsState()
 
+    val filteredSavedGames by remember(savedGames, difficulty) {
+        derivedStateOf { savedGames.filter { it.difficulty == difficulty } }
+    }
+
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
 
     Scaffold(
@@ -92,22 +97,44 @@ fun PlayMenuScreen(
             )
         }
     ) { innerPadding ->
-        LazyColumn(
-            contentPadding = innerPadding,
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
         ) {
-            item {
-                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+            TabRow(
+                selectedTabIndex = difficulty.ordinal,
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.primary,
+            ) {
+                Difficulty.entries.forEach { level ->
+                    Tab(
+                        selected = difficulty == level,
+                        onClick = { difficulty = level },
+                        text = { Text(text = level.name) }
+                    )
+                }
+            }
+
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(0.dp)
+            ) {
+                item {
                     Text(
                         text = "Recent Games",
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(vertical = 8.dp)
                     )
+                }
 
-                    if (savedGames.isEmpty()) {
+                if (filteredSavedGames.isEmpty()) {
+                    item {
                          OutlinedCard(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
                              colors = CardDefaults.outlinedCardColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
                             )
@@ -119,78 +146,47 @@ fun PlayMenuScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = "No saved games found",
+                                    text = "No saved games found for ${difficulty.name}",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
-                    } else {
-                        // Display only the last 3 saved games or similar logic if needed,
-                        // but here we just show them in a column inside the card or separate cards.
-                        // User asked for "Saved games, using card suite".
-                        // Let's list each game as a card.
-                        savedGames.forEach { game ->
-                            OutlinedCard(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp)
-                                    .clickable { onContinueGame(game.id) },
-                            ) {
-                                ListItem(
-                                    headlineContent = { Text("Game ${game.date}") },
-                                    supportingContent = {
-                                        Text("${game.difficulty} • ${game.completionPercentage}% Complete")
-                                    },
-                                    leadingContent = {
-                                        Icon(
-                                            imageVector = Icons.Outlined.DateRange,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary
-                                        )
-                                    },
-                                    trailingContent = {
-                                        Icon(
-                                            imageVector = Icons.Default.PlayArrow,
-                                            contentDescription = "Resume"
-                                        )
-                                    }
-                                )
-                            }
-                        }
                     }
-                }
-            }
-
-            item {
-                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    Text(
-                        text = "Difficulty",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
-                    )
-
-                    SingleChoiceSegmentedButtonRow(
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Difficulty.entries.forEachIndexed { index, level ->
-                            SegmentedButton(
-                                selected = difficulty == level,
-                                onClick = { difficulty = level },
-                                shape = SegmentedButtonDefaults.itemShape(
-                                    index = index,
-                                    count = Difficulty.entries.size
-                                ),
-                                label = {
-                                    Text(
-                                        text = level.name,
-                                        style = MaterialTheme.typography.labelMedium
+                } else {
+                    items(filteredSavedGames.size) { index ->
+                        val game = filteredSavedGames[index]
+                        OutlinedCard(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                                .clickable { onContinueGame(game.id) },
+                        ) {
+                            ListItem(
+                                headlineContent = { Text("Game ${game.date}") },
+                                supportingContent = {
+                                    Text("${game.difficulty} • ${game.completionPercentage}% Complete")
+                                },
+                                leadingContent = {
+                                    Icon(
+                                        imageVector = Icons.Outlined.DateRange,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary
                                     )
                                 },
+                                trailingContent = {
+                                    Icon(
+                                        imageVector = Icons.Default.PlayArrow,
+                                        contentDescription = "Resume"
+                                    )
+                                }
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.height(80.dp)) // Spacing for FAB
+                }
+
+                item {
+                     Spacer(modifier = Modifier.height(80.dp)) // Spacing for FAB
                 }
             }
         }
