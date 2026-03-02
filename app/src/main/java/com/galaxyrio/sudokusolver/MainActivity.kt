@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -16,6 +17,8 @@ import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -28,6 +31,10 @@ import com.galaxyrio.sudokusolver.ui.screen.PlayMenuScreen
 import com.galaxyrio.sudokusolver.ui.screen.play.SudokuGameScreen
 import com.galaxyrio.sudokusolver.ui.screen.SettingsScreen
 import com.galaxyrio.sudokusolver.ui.screen.Difficulty
+import com.galaxyrio.sudokusolver.database.AppDatabase
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,6 +54,10 @@ fun SudokuSolverApp() {
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.PLAY) }
     var isPlaying by rememberSaveable { mutableStateOf(false) }
     var gameDifficulty by rememberSaveable { mutableStateOf(Difficulty.MEDIUM) }
+
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val dao = remember { AppDatabase.getDatabase(context).sudokuDao() }
 
     if (isPlaying) {
         SudokuGameScreen(
@@ -80,9 +91,17 @@ fun SudokuSolverApp() {
                     initialDifficulty = gameDifficulty,
                     onStartGame = { selectedDifficulty ->
                         gameDifficulty = selectedDifficulty
-                        isPlaying = true
+                        // Delete any existing game for this difficulty before starting
+                        scope.launch {
+                            withContext(Dispatchers.IO) {
+                                dao.deleteGame(selectedDifficulty)
+                            }
+                            isPlaying = true
+                        }
                     },
-                    onContinueGame = { isPlaying = true }
+                    onContinueGame = {
+                        isPlaying = true
+                    }
                 )
                 AppDestinations.SETTINGS -> SettingsScreen(modifier)
             }

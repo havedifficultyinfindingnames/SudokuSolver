@@ -44,6 +44,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import com.galaxyrio.sudokusolver.game.validator.SudokuValidator
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material3.CircularProgressIndicator
+import com.galaxyrio.sudokusolver.database.AppDatabase
+import com.galaxyrio.sudokusolver.database.SudokuEntity
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("UnusedBoxWithConstraintsScope")
@@ -53,17 +60,48 @@ fun SudokuGameScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    BackHandler(onBack = onBack)
+    BackHandler(onBack = {
+        // Before backing out, save explicitly? (Already saved on update)
+        onBack()
+    })
+
+    val context = LocalContext.current
+    val dao = remember { AppDatabase.getDatabase(context).sudokuDao() }
+    val scope = rememberCoroutineScope()
 
     // Initialize the board using the generator
-    var sudoku by remember(difficulty) {
-        val clues = when (difficulty) {
-            Difficulty.EASY -> 40
-            Difficulty.MEDIUM -> 30
-            Difficulty.HARD -> 24
+    // We use a nullable state to show loading until we check the DB
+    var sudokuState by remember { mutableStateOf<Sudoku?>(null) }
+
+    LaunchedEffect(difficulty) {
+        // Check if there is a saved game for this difficulty
+        withContext(Dispatchers.IO) {
+            val savedGame = dao.getGame(difficulty)
+            if (savedGame != null) {
+                 sudokuState = savedGame.sudoku
+            } else {
+                val clues = when (difficulty) {
+                    Difficulty.EASY -> 40
+                    Difficulty.MEDIUM -> 30
+                    Difficulty.HARD -> 24
+                }
+                val newGame = SudokuGenerator().generate(clues)
+                sudokuState = newGame
+                // Save immediately so "Continue" works if I exit right away?
+                // Probably better to save only on move, but saving initial state is safer.
+                dao.saveGame(SudokuEntity(difficulty, newGame))
+            }
         }
-        mutableStateOf(SudokuGenerator().generate(clues))
     }
+
+    if (sudokuState == null) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
+    var sudoku by remember(sudokuState) { mutableStateOf(sudokuState!!) }
 
     var selectedRow by remember { mutableStateOf<Int?>(null) }
     var selectedCol by remember { mutableStateOf<Int?>(null) }
@@ -75,7 +113,7 @@ fun SudokuGameScreen(
     val history = remember { mutableListOf<Sudoku>() }
 
     // Hint state
-    val scope = rememberCoroutineScope()
+    // Scope is already defined above
     val scaffoldState = rememberBottomSheetScaffoldState(
         bottomSheetState = rememberStandardBottomSheetState(
             initialValue = SheetValue.Hidden,
@@ -87,10 +125,20 @@ fun SudokuGameScreen(
         history.add(sudoku)
         sudoku = newSudoku
 
+        // Save to DB asynchronously
+        scope.launch(Dispatchers.IO) {
+             dao.saveGame(SudokuEntity(difficulty = difficulty, sudoku = newSudoku))
+        }
+
         // Check win condition
         val isFull = newSudoku.cells.none { it.value == 0 }
         if (isFull && SudokuValidator.isBoardValid(newSudoku)) {
              showWinDialog = true
+             // Clear saved game on win? Or keep it as solved?
+             // Usually cleared so next time it starts fresh.
+             scope.launch(Dispatchers.IO) {
+                 dao.deleteGame(difficulty)
+             }
         }
     }
 
