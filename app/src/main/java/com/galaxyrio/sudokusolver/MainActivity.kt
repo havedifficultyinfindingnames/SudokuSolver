@@ -4,9 +4,14 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
@@ -17,20 +22,30 @@ import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.galaxyrio.sudokusolver.ui.theme.SudokuSolverTheme
 import com.galaxyrio.sudokusolver.ui.screen.InfoScreen
 import com.galaxyrio.sudokusolver.ui.screen.PlayMenuScreen
 import com.galaxyrio.sudokusolver.ui.screen.play.SudokuGameScreen
 import com.galaxyrio.sudokusolver.ui.screen.SettingsScreen
+import com.galaxyrio.sudokusolver.ui.screen.SettingsCategory
 import com.galaxyrio.sudokusolver.ui.screen.Difficulty
+import com.galaxyrio.sudokusolver.ui.screen.settings.AppearanceSettingsScreen
+import com.galaxyrio.sudokusolver.ui.screen.settings.GameSettingsScreen
+import com.galaxyrio.sudokusolver.ui.screen.settings.AssistanceSettingsScreen
+import com.galaxyrio.sudokusolver.ui.screen.settings.FilesSettingsScreen
+import com.galaxyrio.sudokusolver.ui.screen.settings.LanguageSettingsScreen
+import com.galaxyrio.sudokusolver.ui.screen.settings.AboutSettingsScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,56 +62,141 @@ class MainActivity : ComponentActivity() {
 @PreviewScreenSizes
 @Composable
 fun SudokuSolverApp() {
-    var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.PLAY) }
-    var isPlaying by rememberSaveable { mutableStateOf(false) }
-    var gameDifficulty by rememberSaveable { mutableStateOf(Difficulty.MEDIUM) }
-    var selectedGameId: Long? by rememberSaveable { mutableStateOf(null) }
+    val navController = rememberNavController()
 
-    val context = LocalContext.current
+    NavHost(
+        navController = navController,
+        startDestination = "home",
+        enterTransition = { slideInHorizontally { it } + fadeIn() },
+        exitTransition = { slideOutHorizontally { -it } + fadeOut() },
+        popEnterTransition = { slideInHorizontally { -it } + fadeIn() },
+        popExitTransition = { slideOutHorizontally { it } + fadeOut() },
+    ) {
+        composable(
+            route = "home",
+            enterTransition = { fadeIn(tween(300)) },
+            exitTransition = { fadeOut(tween(300)) }
+        ) {
+            HomeScreen(
+                onStartGame = { difficulty ->
+                    navController.navigate("game/${difficulty.name}")
+                },
+                onContinueGame = { gameId ->
+                    navController.navigate("game/MEDIUM?gameId=$gameId")
+                },
+                onNavigateToSettings = { category ->
+                    navController.navigate("settings/${category.name}")
+                }
+            )
+        }
 
-    if (isPlaying) {
-        SudokuGameScreen(
-            difficulty = gameDifficulty,
-            gameId = selectedGameId,
-            onBack = { isPlaying = false },
-            modifier = Modifier.fillMaxSize()
-        )
-    } else {
-        NavigationSuiteScaffold(
-            navigationSuiteItems = {
-                AppDestinations.entries.forEach {
-                    item(
-                        icon = {
-                            Icon(
-                                it.icon,
-                                contentDescription = it.label
-                            )
-                        },
-                        label = { Text(it.label) },
-                        selected = it == currentDestination,
-                        onClick = { currentDestination = it }
-                    )
+        composable(
+            route = "game/{difficulty}?gameId={gameId}",
+            arguments = listOf(
+                navArgument("difficulty") { type = NavType.StringType },
+                navArgument("gameId") {
+                    type = NavType.LongType
+                    defaultValue = -1L
+                }
+            )
+        ) { backStackEntry ->
+            val difficultyStr = backStackEntry.arguments?.getString("difficulty") ?: "MEDIUM"
+            val gameIdArg = backStackEntry.arguments?.getLong("gameId") ?: -1L
+
+            val difficulty = try { Difficulty.valueOf(difficultyStr) } catch (_: Exception) { Difficulty.MEDIUM }
+            val gameId = if (gameIdArg == -1L) null else gameIdArg
+
+            SudokuGameScreen(
+                difficulty = difficulty,
+                gameId = gameId,
+                onBack = { navController.popBackStack() },
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+
+        composable(
+            route = "settings/{category}",
+            arguments = listOf(navArgument("category") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val categoryStr = backStackEntry.arguments?.getString("category")
+            val category = SettingsCategory.entries.find { it.name == categoryStr }
+
+            val onBack: () -> Unit = { navController.popBackStack() }
+            val modifier = Modifier.fillMaxSize()
+
+            if (category != null) {
+                // Determine specific settings screen
+                when (category) {
+                    SettingsCategory.APPEARANCE -> AppearanceSettingsScreen(onBack, modifier)
+                    SettingsCategory.GAME -> GameSettingsScreen(onBack, modifier)
+                    SettingsCategory.ASSISTANCE -> AssistanceSettingsScreen(onBack, modifier)
+                    SettingsCategory.FILES -> FilesSettingsScreen(onBack, modifier)
+                    SettingsCategory.LANGUAGE -> LanguageSettingsScreen(onBack, modifier)
+                    SettingsCategory.ABOUT -> AboutSettingsScreen(onBack, modifier)
                 }
             }
-        ) {
-            val modifier = Modifier.fillMaxSize()
-            when (currentDestination) {
+        }
+    }
+}
+
+@Composable
+fun HomeScreen(
+    onStartGame: (Difficulty) -> Unit,
+    onContinueGame: (String) -> Unit,
+    onNavigateToSettings: (SettingsCategory) -> Unit
+) {
+    var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.PLAY) }
+    var gameDifficulty by rememberSaveable { mutableStateOf(Difficulty.MEDIUM) }
+
+    NavigationSuiteScaffold(
+        navigationSuiteItems = {
+            AppDestinations.entries.forEach {
+                item(
+                    icon = {
+                        Icon(
+                            it.icon,
+                            contentDescription = it.label
+                        )
+                    },
+                    label = { Text(it.label) },
+                    selected = it == currentDestination,
+                    onClick = { currentDestination = it }
+                )
+            }
+        }
+    ) {
+        val modifier = Modifier.fillMaxSize()
+        AnimatedContent(
+            targetState = currentDestination,
+            label = "main_nav_transition",
+            transitionSpec = {
+                val duration = 400
+                if (targetState.ordinal > initialState.ordinal) {
+                    (slideInHorizontally(animationSpec = tween(duration)) { it } + fadeIn(animationSpec = tween(duration))) togetherWith
+                        (slideOutHorizontally(animationSpec = tween(duration)) { -it/4 } + fadeOut(animationSpec = tween(duration)))
+                } else {
+                    (slideInHorizontally(animationSpec = tween(duration)) { -it } + fadeIn(animationSpec = tween(duration))) togetherWith
+                        (slideOutHorizontally(animationSpec = tween(duration)) { it/4 } + fadeOut(animationSpec = tween(duration)))
+                }
+            }
+        ) { targetScreen ->
+            when (targetScreen) {
                 AppDestinations.INFO -> InfoScreen(modifier)
                 AppDestinations.PLAY -> PlayMenuScreen(
                     modifier = modifier,
                     initialDifficulty = gameDifficulty,
                     onStartGame = { selectedDifficulty ->
                         gameDifficulty = selectedDifficulty
-                        selectedGameId = null // New game
-                        isPlaying = true
+                        onStartGame(selectedDifficulty)
                     },
                     onContinueGame = { gameId ->
-                        // gameId string needs to be parsed to Long
-                        selectedGameId = gameId.toLongOrNull()
-                        isPlaying = true
+                        onContinueGame(gameId)
                     }
                 )
-                AppDestinations.SETTINGS -> SettingsScreen(modifier)
+                AppDestinations.SETTINGS -> SettingsScreen(
+                    onNavigateTo = onNavigateToSettings,
+                    modifier = modifier
+                )
             }
         }
     }

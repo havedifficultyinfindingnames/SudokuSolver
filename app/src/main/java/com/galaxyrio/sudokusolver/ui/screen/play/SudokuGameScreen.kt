@@ -94,12 +94,10 @@ fun SudokuGameScreen(
         )
     )
 
-    BackHandler(enabled = true) {
-        if (scaffoldState.bottomSheetState.currentValue == SheetValue.Expanded) {
-            scope.launch { scaffoldState.bottomSheetState.hide() }
-        } else {
-            onBack()
-        }
+    val isBottomSheetVisible = scaffoldState.bottomSheetState.currentValue != SheetValue.Hidden
+
+    BackHandler(enabled = isBottomSheetVisible) {
+        scope.launch { scaffoldState.bottomSheetState.hide() }
     }
 
     // Initialize the board using the generator
