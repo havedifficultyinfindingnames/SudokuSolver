@@ -479,7 +479,7 @@ private fun ToolbarActionButton(
             .fillMaxSize()
             .clickable(
                 interactionSource = interactionSource,
-                indication = ripple(bounded = false, radius = 60.dp),
+                indication = ripple(bounded = false, radius = 400.dp),  //大于屏幕宽度的半径确保整个按钮都有水波纹效果
                 onClick = onClick
             ),
         contentAlignment = Alignment.Center

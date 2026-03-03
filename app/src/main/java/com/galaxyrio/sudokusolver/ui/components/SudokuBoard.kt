@@ -77,8 +77,13 @@ fun SudokuBoard(
                                         val col = blockCol * 3 + cellColInBlock
                                         val cell = sudoku.getCell(row, col)
 
-                                        val isSelected = (row == selectedRow && col == selectedCol)
                                         val isError = !cell.isFixed && cell.value != 0 && SudokuValidator.checkContradiction(sudoku, row, col)
+                                        val isSelected = (row == selectedRow && col == selectedCol)
+                                        val isSelectedCross = (selectedRow != null && selectedCol != null) && (row == selectedRow || col == selectedCol)
+                                        val isSelectedCell = (selectedRow != null && selectedCol != null) && ((row / 3 == selectedRow?.div(3) && col / 3 == selectedCol?.div(
+                                            3
+                                        )))
+
                                         val isValueHighlighted = (highlightNumber != null && cell.value == highlightNumber)
 
                                         val errorCandidates = if (cell.value == 0) {
@@ -98,6 +103,8 @@ fun SudokuBoard(
                                             isError = isError,
                                             highlightNumber = highlightNumber,
                                             isValueHighlighted = isValueHighlighted,
+                                            isSelectedCross = isSelectedCross,
+                                            isSelectedCell = isSelectedCell,
                                             onClick = { onCellClick(row, col) },
                                             modifier = Modifier
                                                 .weight(1f)
@@ -126,10 +133,15 @@ fun SudokuCell(
     isError: Boolean = false,
     highlightNumber: Int? = null,
     isValueHighlighted: Boolean = false,
+    isSelectedCross: Boolean = false,
+    isSelectedCell: Boolean = false,
 ) {
     val backgroundColor = when {
-        isSelected -> MaterialTheme.colorScheme.secondaryContainer
-        isValueHighlighted -> MaterialTheme.colorScheme.secondaryContainer
+        isError -> MaterialTheme.colorScheme.errorContainer
+        isSelected && !isError -> MaterialTheme.colorScheme.primaryContainer
+        isSelectedCross && !isError -> MaterialTheme.colorScheme.surfaceContainerHighest
+        isSelectedCell && !isError -> MaterialTheme.colorScheme.surfaceContainer
+        isValueHighlighted && !isError -> MaterialTheme.colorScheme.secondaryContainer
         else -> MaterialTheme.colorScheme.surface
     }
 
@@ -141,15 +153,17 @@ fun SudokuCell(
     ) {
         if (value != null && value != 0) {
             val textColor = when {
-                isError -> MaterialTheme.colorScheme.error
                 isFixed -> MaterialTheme.colorScheme.onSurface
+                isError -> MaterialTheme.colorScheme.onErrorContainer
+                isSelected && !isError -> MaterialTheme.colorScheme.onPrimaryContainer
+                isValueHighlighted && !isError -> MaterialTheme.colorScheme.onSecondaryContainer
                 else -> MaterialTheme.colorScheme.primary
             }
 
             Text(
                 text = value.toString(),
                 style = MaterialTheme.typography.bodyLarge.copy(
-                    fontWeight = if (isFixed) FontWeight.Bold else FontWeight.Normal,
+                    fontWeight = if (isFixed) FontWeight.Bold else FontWeight.Bold, // 改为Normal可以增加对比度
                     fontSize = 30.sp
                 ),
                 color = textColor
