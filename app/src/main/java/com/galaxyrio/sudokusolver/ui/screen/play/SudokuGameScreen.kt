@@ -301,17 +301,21 @@ fun SudokuGameScreen(
 
                             // If a number is selected in the pad, try to fill it
                             val currentCell = sudoku.getCell(row, col)
-                            if (!currentCell.isFixed && selectedNumber != null) {
-                                if (isNoteMode) {
-                                    if (currentCell.value == 0) {
-                                        updateSudoku(sudoku.toggleCandidate(row, col, selectedNumber!!))
+                            if (selectedNumber != null) {
+                                if (!currentCell.isFixed) {
+                                    if (isNoteMode) {
+                                        if (currentCell.value == 0) {
+                                            updateSudoku(sudoku.toggleCandidate(row, col, selectedNumber!!))
+                                        }
+                                    } else {
+                                        val newValue = selectedNumber!!
+                                        // Only update if value is changing
+                                        if (currentCell.value != newValue) {
+                                            updateSudoku(sudoku.setCell(row, col, newValue))
+                                        }
                                     }
                                 } else {
-                                    val newValue = selectedNumber!!
-                                    // Only update if value is changing
-                                    if (currentCell.value != newValue) {
-                                        updateSudoku(sudoku.setCell(row, col, newValue))
-                                    }
+                                    selectedNumber = null
                                 }
                             }
                         },
