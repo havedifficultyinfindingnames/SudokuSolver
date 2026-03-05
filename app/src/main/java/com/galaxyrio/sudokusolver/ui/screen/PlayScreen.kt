@@ -13,6 +13,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,6 +32,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.ListItem
@@ -39,6 +41,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -56,6 +59,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.style.TextOverflow
@@ -119,7 +123,7 @@ fun PlayMenuScreen(
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
         topBar = {
             LargeFlexibleTopAppBar(
                 title = {
@@ -131,11 +135,11 @@ fun PlayMenuScreen(
                 },
                 scrollBehavior = scrollBehavior,
                 colors = topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer),
                 navigationIcon = {
                      if (isSelectionMode) {
-                         androidx.compose.material3.IconButton(onClick = { selectedGameIds = emptySet() }) {
+                         IconButton(onClick = { selectedGameIds = emptySet() }) {
                              Icon(Icons.Default.Close, contentDescription = "Close Selection")
                          }
                      }
@@ -182,7 +186,7 @@ fun PlayMenuScreen(
             PrimaryTabRow(
                 selectedTabIndex = difficulty.ordinal,
                 modifier = Modifier.padding(innerPadding),
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                containerColor = MaterialTheme.colorScheme.surfaceContainer
             ) {
                 Difficulty.entries.forEach { level ->
                     Tab(
@@ -194,8 +198,8 @@ fun PlayMenuScreen(
             }
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(0.dp)
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
             ) {
                 item {
                     Text(
@@ -234,75 +238,65 @@ fun PlayMenuScreen(
                         val game = filteredSavedGames[index]
                         val isSelected = game.id in selectedGameIds
 
-                        OutlinedCard(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp)
-                                .combinedClickable(
-                                    onClick = {
-                                        if (isSelectionMode) {
-                                            selectedGameIds = if (isSelected) {
-                                                selectedGameIds - game.id
-                                            } else {
-                                                selectedGameIds + game.id
-                                            }
-                                        } else {
-                                            onContinueGame(game.id)
-                                        }
-                                    },
-                                    onLongClick = {
-                                        if (!isSelectionMode) {
-                                            selectedGameIds = selectedGameIds + game.id
-                                        }
-                                    }
-                                ),
-                            colors = if (isSelected) {
-                                CardDefaults.outlinedCardColors(
-                                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                            } else {
-                                CardDefaults.outlinedCardColors()
-                            },
-                             border = if (isSelected) {
-                                BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-                            } else {
-                                CardDefaults.outlinedCardBorder()
-                            }
-                        ) {
-                            ListItem(
-                                headlineContent = { Text("Game ${game.date}") },
-                                supportingContent = {
-                                    Text("${game.difficulty} • ${game.completionPercentage}% Complete")
-                                },
-                                leadingContent = {
-                                    if (isSelected) {
-                                         Icon(
-                                            imageVector = Icons.Filled.CheckCircle,
-                                            contentDescription = "Selected",
-                                            tint = MaterialTheme.colorScheme.primary
-                                        )
+                        SegmentedListItem(
+                            onClick = {
+                                if (isSelectionMode) {
+                                    selectedGameIds = if (isSelected) {
+                                        selectedGameIds - game.id
                                     } else {
-                                        Icon(
-                                            imageVector = Icons.Outlined.DateRange,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary
-                                        )
+                                        selectedGameIds + game.id
                                     }
+                                } else {
+                                    onContinueGame(game.id)
+                                }
+                            },
+                            onLongClick = {
+                                if (!isSelectionMode) {
+                                    selectedGameIds = selectedGameIds + game.id
+                                }
+                            },
+                            shapes =
+                                if (isSelected){
+                                    ListItemDefaults.shapes(MaterialTheme.shapes.large)
+                                } else {
+                                    ListItemDefaults.segmentedShapes(index = index, count = filteredSavedGames.size)
                                 },
-                                trailingContent = {
-                                    if (!isSelectionMode) {
-                                        Icon(
-                                            imageVector = Icons.Default.PlayArrow,
-                                            contentDescription = "Resume"
-                                        )
-                                    }
-                                },
-                                colors = ListItemDefaults.colors(
-                                    containerColor = androidx.compose.ui.graphics.Color.Transparent
-                                )
-                            )
-                        }
+                            content = { Text("Game ${game.date}") },
+                            supportingContent = {
+                                Text("${game.difficulty} • ${game.completionPercentage}% Complete")
+                            },
+                            leadingContent = {
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Filled.CheckCircle,
+                                        contentDescription = "Selected",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Outlined.DateRange,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            },
+                            trailingContent = {
+                                if (!isSelectionMode) {
+                                    Icon(
+                                        imageVector = Icons.Default.PlayArrow,
+                                        contentDescription = "Resume"
+                                    )
+                                }
+                            },
+                            colors =
+                                if(isSelected){
+                                    ListItemDefaults.colors(
+                                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                                    )
+                                } else {
+                                    ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
+                                }
+                        )
                     }
                 }
 

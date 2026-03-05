@@ -52,7 +52,6 @@ enum class SettingsCategory(val title: String, val icon: ImageVector, val subtit
     LANGUAGE("Language", Icons.Default.Language,"English", 4),
     ABOUT("About", Icons.Default.Info,"Version", 5)
 }
-const val itemCount =6
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -64,13 +63,13 @@ fun SettingsScreen(
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
         topBar = {
             LargeFlexibleTopAppBar(
                 title = { Text("Settings") },
                 colors = topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer),
                 scrollBehavior = scrollBehavior
             )
         }
@@ -86,7 +85,7 @@ fun SettingsScreen(
             items(SettingsCategory.entries) { category ->
                 SegmentedListItem(
                     onClick = {onNavigateTo(category)},
-                    shapes = ListItemDefaults.segmentedShapes(index = category.idx, count = itemCount),
+                    shapes = ListItemDefaults.segmentedShapes(index = category.idx, count = 6),
 
                     leadingContent = {
                         Box(
