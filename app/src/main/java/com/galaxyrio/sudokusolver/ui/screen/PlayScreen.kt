@@ -28,18 +28,22 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarDefaults.topAppBarColors
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
@@ -71,7 +75,9 @@ data class SavedGame(
     val completionPercentage: Int
 )
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class,
+    ExperimentalMaterial3ExpressiveApi::class
+)
 @Composable
 fun PlayMenuScreen(
     modifier: Modifier = Modifier,
@@ -113,8 +119,9 @@ fun PlayMenuScreen(
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         topBar = {
-            LargeTopAppBar(
+            LargeFlexibleTopAppBar(
                 title = {
                     Text(
                         if (isSelectionMode) "${selectedGameIds.size} Selected" else "Sudoku",
@@ -123,10 +130,9 @@ fun PlayMenuScreen(
                     )
                 },
                 scrollBehavior = scrollBehavior,
-                colors = TopAppBarDefaults.largeTopAppBarColors(
-                    containerColor = expandedColor,
-                    scrolledContainerColor = collapsedColor
-                ),
+                colors = topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                 navigationIcon = {
                      if (isSelectionMode) {
                          androidx.compose.material3.IconButton(onClick = { selectedGameIds = emptySet() }) {
@@ -136,6 +142,7 @@ fun PlayMenuScreen(
                 }
             )
         },
+
         floatingActionButton = {
             AnimatedContent(
                 targetState = isSelectionMode,
@@ -167,15 +174,15 @@ fun PlayMenuScreen(
             }
         }
     ) { innerPadding ->
+
         Column(
             modifier = Modifier
-                .padding(innerPadding)
                 .fillMaxSize()
         ) {
-            TabRow(
+            PrimaryTabRow(
                 selectedTabIndex = difficulty.ordinal,
-                containerColor = containerColor,
-                contentColor = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(innerPadding),
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
             ) {
                 Difficulty.entries.forEach { level ->
                     Tab(
@@ -185,7 +192,6 @@ fun PlayMenuScreen(
                     )
                 }
             }
-
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
