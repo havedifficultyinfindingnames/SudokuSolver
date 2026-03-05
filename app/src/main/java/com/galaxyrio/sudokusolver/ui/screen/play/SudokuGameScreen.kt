@@ -8,7 +8,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -65,11 +64,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.ripple.rememberRipple
-import androidx.compose.material3.FilledIconToggleButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.ripple
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -366,9 +361,8 @@ fun SudokuGameScreen(
                                                 updateSudoku(sudoku.toggleCandidate(row, col, number))
                                             }
                                         } else {
-                                            val newValue = number
-                                            if (currentCell.value != newValue) {
-                                                updateSudoku(sudoku.setCell(row, col, newValue))
+                                            if (currentCell.value != number) {
+                                                updateSudoku(sudoku.setCell(row, col, number))
                                             }
                                         }
                                     }

@@ -7,9 +7,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,8 +32,6 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeFlexibleTopAppBar
-import androidx.compose.material3.LargeTopAppBar
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
@@ -43,12 +39,10 @@ import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarDefaults.topAppBarColors
 import androidx.compose.material3.rememberTopAppBarState
-import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -59,8 +53,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -79,7 +71,8 @@ data class SavedGame(
     val completionPercentage: Int
 )
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class,
+@OptIn(
+    ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class,
     ExperimentalMaterial3ExpressiveApi::class
 )
 @Composable
@@ -108,18 +101,8 @@ fun PlayMenuScreen(
         derivedStateOf { savedGames.filter { it.difficulty == difficulty } }
     }
 
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
-
-    // Define shared colors
-    val collapsedColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
-    val expandedColor = MaterialTheme.colorScheme.surface
-
-    // Determine the container color based on scroll state
-    val containerColor = lerp(
-        expandedColor,
-        collapsedColor,
-        scrollBehavior.state.collapsedFraction
-    )
+    val scrollBehavior =
+        TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -136,13 +119,14 @@ fun PlayMenuScreen(
                 scrollBehavior = scrollBehavior,
                 colors = topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer),
+                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer
+                ),
                 navigationIcon = {
-                     if (isSelectionMode) {
-                         IconButton(onClick = { selectedGameIds = emptySet() }) {
-                             Icon(Icons.Default.Close, contentDescription = "Close Selection")
-                         }
-                     }
+                    if (isSelectionMode) {
+                        IconButton(onClick = { selectedGameIds = emptySet() }) {
+                            Icon(Icons.Default.Close, contentDescription = "Close Selection")
+                        }
+                    }
                 }
             )
         },
@@ -182,10 +166,11 @@ fun PlayMenuScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(innerPadding)
         ) {
             PrimaryTabRow(
                 selectedTabIndex = difficulty.ordinal,
-                modifier = Modifier.padding(innerPadding),
+                modifier = Modifier,
                 containerColor = MaterialTheme.colorScheme.surfaceContainer
             ) {
                 Difficulty.entries.forEach { level ->
@@ -196,114 +181,119 @@ fun PlayMenuScreen(
                     )
                 }
             }
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
-            ) {
-                item {
-                    Text(
-                        text = "Recent Games",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(vertical = 8.dp)
-                    )
-                }
 
-                if (filteredSavedGames.isEmpty()) {
-                    item {
-                         OutlinedCard(
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(all = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
+        ) {
+            item {
+                Text(
+                    text = "Recent Games",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
+
+            if (filteredSavedGames.isEmpty()) {
+                item {
+                    OutlinedCard(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        colors = CardDefaults.outlinedCardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        )
+                    ) {
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 4.dp),
-                             colors = CardDefaults.outlinedCardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                            )
+                                .padding(24.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(24.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "No saved games found for ${difficulty.name}",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            Text(
+                                text = "No saved games found for ${difficulty.name}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
-                } else {
-                    items(filteredSavedGames.size) { index ->
-                        val game = filteredSavedGames[index]
-                        val isSelected = game.id in selectedGameIds
-
-                        SegmentedListItem(
-                            onClick = {
-                                if (isSelectionMode) {
-                                    selectedGameIds = if (isSelected) {
-                                        selectedGameIds - game.id
-                                    } else {
-                                        selectedGameIds + game.id
-                                    }
-                                } else {
-                                    onContinueGame(game.id)
-                                }
-                            },
-                            onLongClick = {
-                                if (!isSelectionMode) {
-                                    selectedGameIds = selectedGameIds + game.id
-                                }
-                            },
-                            shapes =
-                                if (isSelected){
-                                    ListItemDefaults.shapes(MaterialTheme.shapes.large)
-                                } else {
-                                    ListItemDefaults.segmentedShapes(index = index, count = filteredSavedGames.size)
-                                },
-                            content = { Text("Game ${game.date}") },
-                            supportingContent = {
-                                Text("${game.difficulty} • ${game.completionPercentage}% Complete")
-                            },
-                            leadingContent = {
-                                if (isSelected) {
-                                    Icon(
-                                        imageVector = Icons.Filled.CheckCircle,
-                                        contentDescription = "Selected",
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                } else {
-                                    Icon(
-                                        imageVector = Icons.Outlined.DateRange,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            },
-                            trailingContent = {
-                                if (!isSelectionMode) {
-                                    Icon(
-                                        imageVector = Icons.Default.PlayArrow,
-                                        contentDescription = "Resume"
-                                    )
-                                }
-                            },
-                            colors =
-                                if(isSelected){
-                                    ListItemDefaults.colors(
-                                        containerColor = MaterialTheme.colorScheme.secondaryContainer
-                                    )
-                                } else {
-                                    ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
-                                }
-                        )
-                    }
                 }
+            } else {
+                items(filteredSavedGames.size) { index ->
+                    val game = filteredSavedGames[index]
+                    val isSelected = game.id in selectedGameIds
 
-                item {
-                     Spacer(modifier = Modifier.height(80.dp)) // Spacing for FAB
+                    SegmentedListItem(
+                        onClick = {
+                            if (isSelectionMode) {
+                                selectedGameIds = if (isSelected) {
+                                    selectedGameIds - game.id
+                                } else {
+                                    selectedGameIds + game.id
+                                }
+                            } else {
+                                onContinueGame(game.id)
+                            }
+                        },
+                        onLongClick = {
+                            if (!isSelectionMode) {
+                                selectedGameIds = selectedGameIds + game.id
+                            }
+                        },
+                        shapes =
+                            if (isSelected) {
+                                ListItemDefaults.shapes(MaterialTheme.shapes.large)
+                            } else {
+                                ListItemDefaults.segmentedShapes(
+                                    index = index,
+                                    count = filteredSavedGames.size
+                                )
+                            },
+                        content = { Text("Game ${game.date}") },
+                        supportingContent = {
+                            Text("${game.difficulty} • ${game.completionPercentage}% Complete")
+                        },
+                        leadingContent = {
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Filled.CheckCircle,
+                                    contentDescription = "Selected",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Outlined.DateRange,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        },
+                        trailingContent = {
+                            if (!isSelectionMode) {
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = "Resume"
+                                )
+                            }
+                        },
+                        colors =
+                            if (isSelected) {
+                                ListItemDefaults.colors(
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                                )
+                            } else {
+                                ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
+                            }
+                    )
                 }
             }
+
+            item {
+                Spacer(modifier = Modifier.height(80.dp)) // Spacing for FAB
+            }
+        }
         }
     }
 }

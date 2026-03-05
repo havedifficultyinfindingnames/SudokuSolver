@@ -20,11 +20,17 @@ android {
         versionName = "1.0.1.260305alpha"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        ndk {
+            // 通常只需 arm64-v8a，如果是旧设备则加 armeabi-v7a
+            // 移除 x86_64 和 x86 (通常只用于模拟器)
+            abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a"))
+        }
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
