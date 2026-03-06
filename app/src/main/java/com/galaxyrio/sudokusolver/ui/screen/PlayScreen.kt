@@ -185,14 +185,17 @@ fun PlayMenuScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(all = 16.dp),
+                .padding(horizontal =16.dp),
+
             verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
         ) {
             item {
                 Text(
                     text = "Recent Games",
                     style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(vertical = 8.dp)
+                    modifier = Modifier
+                        .padding(vertical = 8.dp)
+                        .padding(start = 4.dp)
                 )
             }
 

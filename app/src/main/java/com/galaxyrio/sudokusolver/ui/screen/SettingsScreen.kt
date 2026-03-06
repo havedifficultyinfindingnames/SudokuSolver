@@ -4,8 +4,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -62,7 +64,7 @@ fun SettingsScreen(
                 colors = topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainer,
                     scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer),
-                scrollBehavior = scrollBehavior
+                // scrollBehavior = scrollBehavior // 设置列表较短，暂时不需要滚动收缩
             )
         }
     ) { innerPadding ->
@@ -82,11 +84,16 @@ fun SettingsScreen(
                     leadingContent = {
                         Box(
                             modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.secondaryContainer),
+                                .width(40.dp)
+                                .height(50.dp),
                             contentAlignment = Alignment.Center
                         ){
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.secondaryContainer),
+                            ){}
                             Icon(
                                 imageVector = category.icon,
                                 contentDescription = category.title,
