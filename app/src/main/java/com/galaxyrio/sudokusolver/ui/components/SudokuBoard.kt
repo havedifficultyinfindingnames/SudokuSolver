@@ -210,6 +210,7 @@ fun SudokuCell(
                                     val candidateColor = when {
                                         errorCandidates.contains(candidateNum) -> MaterialTheme.colorScheme.error
                                         isCandidateHighlighted -> MaterialTheme.colorScheme.onSecondaryContainer
+                                        isSelected -> MaterialTheme.colorScheme.onPrimaryContainer
                                         else -> MaterialTheme.colorScheme.secondary
                                     }
 

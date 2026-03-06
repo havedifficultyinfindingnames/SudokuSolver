@@ -1,79 +1,75 @@
 package com.galaxyrio.sudokusolver.ui.screen.play
 
 import android.annotation.SuppressLint
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.BottomSheetScaffold
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Backspace
+import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.SheetValue
-
-import androidx.compose.material3.rememberBottomSheetScaffoldState
-import androidx.compose.material3.rememberStandardBottomSheetState
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-
-import androidx.compose.ui.unit.dp
-import com.galaxyrio.sudokusolver.game.Sudoku
-import com.galaxyrio.sudokusolver.game.generator.SudokuGenerator
-import com.galaxyrio.sudokusolver.ui.components.NumberPad
-import com.galaxyrio.sudokusolver.ui.components.SudokuBoard
-import com.galaxyrio.sudokusolver.ui.screen.Difficulty
-import kotlinx.coroutines.launch
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Text
-import com.galaxyrio.sudokusolver.game.validator.SudokuValidator
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.material3.CircularProgressIndicator
-import com.galaxyrio.sudokusolver.database.AppDatabase
-import com.galaxyrio.sudokusolver.database.SudokuEntity
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.NonCancellable
-import androidx.compose.material3.BottomAppBar
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Undo
-import androidx.compose.material.icons.automirrored.filled.Backspace
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Lightbulb
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.ripple
 import androidx.compose.ui.graphics.Color
-import kotlinx.coroutines.delay
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.galaxyrio.sudokusolver.database.AppDatabase
+import com.galaxyrio.sudokusolver.database.SudokuEntity
+import com.galaxyrio.sudokusolver.game.Sudoku
+import com.galaxyrio.sudokusolver.game.generator.SudokuGenerator
+import com.galaxyrio.sudokusolver.game.validator.SudokuValidator
+import com.galaxyrio.sudokusolver.ui.components.NumberPad
+import com.galaxyrio.sudokusolver.ui.components.SudokuBoard
+import com.galaxyrio.sudokusolver.ui.screen.Difficulty
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("UnusedBoxWithConstraintsScope")
@@ -93,18 +89,8 @@ fun SudokuGameScreen(
     var isTimerRunning by remember { mutableStateOf(true) }
 
     // Hint state
-    val scaffoldState = rememberBottomSheetScaffoldState(
-        bottomSheetState = rememberStandardBottomSheetState(
-            initialValue = SheetValue.Hidden,
-            skipHiddenState = false
-        )
-    )
-
-    val isBottomSheetVisible = scaffoldState.bottomSheetState.currentValue != SheetValue.Hidden
-
-    BackHandler(enabled = isBottomSheetVisible) {
-        scope.launch { scaffoldState.bottomSheetState.hide() }
-    }
+    var showBottomSheet by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState()
 
     // Initialize the board using the generator
     // We use a nullable state to show loading until we check the DB
@@ -267,24 +253,138 @@ fun SudokuGameScreen(
     // Interaction source for the background click to avoid ripple effect if desired
     val interactionSource = remember { MutableInteractionSource() }
 
-    BottomSheetScaffold(
-        scaffoldState = scaffoldState,
-        sheetContent = {
-            com.galaxyrio.sudokusolver.ui.components.GameHintPanel(
-                onBackClick = {
-                    scope.launch { scaffoldState.bottomSheetState.hide() }
-                },
-                onApplyClick = {
-                    /* Apply Hint */
-                    scope.launch { scaffoldState.bottomSheetState.hide() }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(360.dp)
-            )
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        topBar = {
+            Column(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                TopAppBar(
+                    title = {
+                        Text("Sudoku")
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back"
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    )
+                )
+
+                Row(
+                    modifier = Modifier
+                        .padding(bottom = 8.dp)
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = difficulty.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Start,
+                        modifier = Modifier.padding(start = 20.dp)
+                    )
+                    Text(
+                        text = formatTime(timeSpentSeconds),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.End,
+                        modifier = Modifier.padding(end = 20.dp)
+                    )
+                }
+            }
         },
-        sheetPeekHeight = 0.dp,
-        modifier = modifier.fillMaxSize()
+        bottomBar = {
+            BottomAppBar(
+                actions = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier.weight(1f),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            ToolbarActionButton(
+                                onClick = { undo() },
+                                icon = Icons.AutoMirrored.Filled.Undo,
+                                contentDescription = "Undo"
+                            )
+                        }
+                        Box(
+                            modifier = Modifier.weight(1f),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            ToolbarActionButton(
+                                onClick = {
+                                    if (selectedRow != null && selectedCol != null) {
+                                        val row = selectedRow!!
+                                        val col = selectedCol!!
+                                        val currentCell = sudoku.getCell(row, col)
+
+                                        if (!currentCell.isFixed) {
+                                            if (currentCell.value != 0 || currentCell.candidates.isNotEmpty()) {
+                                                updateSudoku(sudoku.setCell(row, col, 0))
+                                            }
+                                        }
+                                    }
+                                },
+                                icon = Icons.AutoMirrored.Filled.Backspace,
+                                contentDescription = "Delete"
+                            )
+                        }
+                        // Edit Button
+                        Box(
+                            modifier = Modifier.weight(1f),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            ToolbarActionButton(
+                                onClick = { isNoteMode = !isNoteMode },
+                                icon = Icons.Default.Edit,
+                                contentDescription = "Note Mode",
+                                isSelected = isNoteMode
+                            )
+                        }
+                        Box(
+                            modifier = Modifier.weight(1f),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            ToolbarActionButton(
+                                onClick = {
+                                    updateSudoku(
+                                        com.galaxyrio.sudokusolver.game.generator.CandidateCalculator.calculateAllCandidates(
+                                            sudoku
+                                        )
+                                    )
+                                },
+                                icon = Icons.Default.AutoAwesome,
+                                contentDescription = "Auto Candidates"
+                            )
+                        }
+                        Box(
+                            modifier = Modifier.weight(1f),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            ToolbarActionButton(
+                                onClick = {
+                                    showBottomSheet = true
+                                },
+                                icon = Icons.Default.Lightbulb,
+                                contentDescription = "Hint"
+                            )
+                        }
+                    }
+                }
+            )
+        }
     ) { paddingValues ->
         if (showWinDialog) {
             AlertDialog(
@@ -317,55 +417,7 @@ fun SudokuGameScreen(
             Column(
                 modifier = Modifier.fillMaxSize()
             ) {
-                // 1. Top Bar Area
-                Column(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    TopAppBar(
-                        title = {
-                            Text("Sudoku")
-                        },
-                        navigationIcon = {
-                            IconButton(onClick = onBack) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Back"
-                                )
-                            }
-                        },
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.surface,
-                            titleContentColor = MaterialTheme.colorScheme.onSurface,
-                        )
-                    )
-
-                    Row(
-                        modifier = Modifier
-                            .padding(bottom = 8.dp)
-                            .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = difficulty.name,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Start,
-                            modifier = Modifier.padding(start = 20.dp)
-                        )
-                        Text(
-                            text = formatTime(timeSpentSeconds),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.End,
-                            modifier = Modifier.padding(end = 20.dp)
-                        )
-                    }
-
-
-                }
-
-                // 2. Board Area
+                // Board Area
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -423,7 +475,7 @@ fun SudokuGameScreen(
                     )
                 }
 
-                // Remaining space for Number Pad and Tool Bar
+                // Remaining space for Number Pad
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -436,10 +488,10 @@ fun SudokuGameScreen(
                             selectedRow = null
                             selectedCol = null
                         },
-                    verticalArrangement = Arrangement.SpaceBetween,
+                    verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // 3. Middle Area: Number Pad
+                    // Middle Area: Number Pad
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -481,95 +533,36 @@ fun SudokuGameScreen(
                             }
                         )
                     }
-
-                    // 4. Tool Bar Area
-                    BottomAppBar(
-                        actions = {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceEvenly,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier.weight(1f),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    ToolbarActionButton(
-                                        onClick = { undo() },
-                                        icon = Icons.AutoMirrored.Filled.Undo,
-                                        contentDescription = "Undo"
-                                    )
-                                }
-                                Box(
-                                    modifier = Modifier.weight(1f),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    ToolbarActionButton(
-                                        onClick = {
-                                            if (selectedRow != null && selectedCol != null) {
-                                                val row = selectedRow!!
-                                                val col = selectedCol!!
-                                                val currentCell = sudoku.getCell(row, col)
-
-                                                if (!currentCell.isFixed) {
-                                                    if (currentCell.value != 0 || currentCell.candidates.isNotEmpty()) {
-                                                        updateSudoku(sudoku.setCell(row, col, 0))
-                                                    }
-                                                }
-                                            }
-                                        },
-                                        icon = Icons.AutoMirrored.Filled.Backspace,
-                                        contentDescription = "Delete"
-                                    )
-                                }
-                                // Edit Button
-                                Box(
-                                    modifier = Modifier.weight(1f),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    ToolbarActionButton(
-                                        onClick = { isNoteMode = !isNoteMode },
-                                        icon = Icons.Default.Edit,
-                                        contentDescription = "Note Mode",
-                                        isSelected = isNoteMode
-                                    )
-                                }
-                                Box(
-                                    modifier = Modifier.weight(1f),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    ToolbarActionButton(
-                                        onClick = {
-                                            updateSudoku(
-                                                com.galaxyrio.sudokusolver.game.generator.CandidateCalculator.calculateAllCandidates(
-                                                    sudoku
-                                                )
-                                            )
-                                        },
-                                        icon = Icons.Default.AutoAwesome,
-                                        contentDescription = "Auto Candidates"
-                                    )
-                                }
-                                Box(
-                                    modifier = Modifier.weight(1f),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    ToolbarActionButton(
-                                        onClick = {
-                                            scope.launch {
-                                                scaffoldState.bottomSheetState.expand()
-                                            }
-                                        },
-                                        icon = Icons.Default.Lightbulb,
-                                        contentDescription = "Hint"
-                                    )
-                                }
-                            }
-                        }
-                    )
                 }
             }
+        }
+    }
 
+    if (showBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showBottomSheet = false },
+            sheetState = sheetState
+        ) {
+            com.galaxyrio.sudokusolver.ui.components.GameHintPanel(
+                onBackClick = {
+                    scope.launch { sheetState.hide() }.invokeOnCompletion {
+                        if (!sheetState.isVisible) {
+                            showBottomSheet = false
+                        }
+                    }
+                },
+                onApplyClick = {
+                    /* Apply Hint */
+                    scope.launch { sheetState.hide() }.invokeOnCompletion {
+                        if (!sheetState.isVisible) {
+                            showBottomSheet = false
+                        }
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(360.dp)
+            )
         }
     }
 }
