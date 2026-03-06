@@ -5,7 +5,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -16,7 +19,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MotionScheme
+
+
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
@@ -40,6 +48,7 @@ import com.galaxyrio.sudokusolver.ui.screen.play.SudokuGameScreen
 import com.galaxyrio.sudokusolver.ui.screen.SettingsScreen
 import com.galaxyrio.sudokusolver.ui.screen.SettingsCategory
 import com.galaxyrio.sudokusolver.ui.screen.Difficulty
+
 import com.galaxyrio.sudokusolver.ui.screen.settings.AppearanceSettingsScreen
 import com.galaxyrio.sudokusolver.ui.screen.settings.GameSettingsScreen
 import com.galaxyrio.sudokusolver.ui.screen.settings.AssistanceSettingsScreen
@@ -60,81 +69,142 @@ class MainActivity : ComponentActivity() {
 }
 
 @PreviewScreenSizes
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SudokuSolverApp() {
     val navController = rememberNavController()
+    val motionScheme = MaterialTheme.motionScheme
+    SharedTransitionLayout {
+        NavHost(
+            navController = navController,
+            startDestination = "home",
+            enterTransition = {
+                slideInHorizontally(
+                    animationSpec = motionScheme.defaultSpatialSpec(),
+                    initialOffsetX = { it }
+                ) + fadeIn(
+                    animationSpec = motionScheme.defaultEffectsSpec(),
+                    initialAlpha = 1f
+                )
+            },
 
-    NavHost(
-        navController = navController,
-        startDestination = "home",
-        enterTransition = { slideInHorizontally { it } + fadeIn() },
-        exitTransition = { slideOutHorizontally { -it } + fadeOut() },
-        popEnterTransition = { slideInHorizontally { -it } + fadeIn() },
-        popExitTransition = { slideOutHorizontally { it } + fadeOut() },
-    ) {
-        composable(
-            route = "home",
-            enterTransition = { fadeIn(tween(300)) },
-            exitTransition = { fadeOut(tween(300)) }
+            exitTransition = {
+                slideOutHorizontally(
+                    animationSpec = motionScheme.fastSpatialSpec(),
+                    targetOffsetX = { -it / 3 }
+                ) + fadeOut(
+                    animationSpec = motionScheme.fastEffectsSpec(),
+                    targetAlpha = 1f
+                )
+            },
+
+            popEnterTransition = {
+                slideInHorizontally(
+                    animationSpec = motionScheme.defaultSpatialSpec(),
+                    initialOffsetX = { -it / 3 }
+                ) + fadeIn(
+                    animationSpec = motionScheme.defaultEffectsSpec(),
+                    initialAlpha = 1f
+                )
+            },
+
+            popExitTransition = {
+                slideOutHorizontally(
+                    animationSpec = motionScheme.fastSpatialSpec(),
+                    targetOffsetX = { it }
+                ) + fadeOut(
+                    animationSpec = motionScheme.fastEffectsSpec(),
+                    targetAlpha = 1f
+                )
+            },
+            sizeTransform = {
+                SizeTransform(
+                    clip = false,
+                    sizeAnimationSpec = { _, _ ->
+                        motionScheme.defaultSpatialSpec()
+                    }
+                )
+            }
         ) {
-            HomeScreen(
-                onStartGame = { difficulty ->
-                    navController.navigate("game/${difficulty.name}")
-                },
-                onContinueGame = { gameId ->
-                    navController.navigate("game/MEDIUM?gameId=$gameId")
-                },
-                onNavigateToSettings = { category ->
-                    navController.navigate("settings/${category.name}")
+            composable(
+                route = "home",
+//            enterTransition = { EnterTransition.None },
+//            exitTransition = { ExitTransition.None }
+            ) {
+                HomeScreen(
+                    onStartGame = { difficulty ->
+                        navController.navigate("game/${difficulty.name}")
+                    },
+                    onContinueGame = { gameId ->
+                        navController.navigate("game/MEDIUM?gameId=$gameId")
+                    },
+                    onNavigateToSettings = { category ->
+                        navController.navigate("settings/${category.name}")
+                    }
+                )
+            }
+
+            composable(
+                route = "game/{difficulty}?gameId={gameId}",
+                arguments = listOf(
+                    navArgument("difficulty") { type = NavType.StringType },
+                    navArgument("gameId") {
+                        type = NavType.LongType
+                        defaultValue = -1L
+                    }
+                )
+            ) { backStackEntry ->
+                val difficultyStr = backStackEntry.arguments?.getString("difficulty") ?: "MEDIUM"
+                val gameIdArg = backStackEntry.arguments?.getLong("gameId") ?: -1L
+
+                val difficulty = try {
+                    Difficulty.valueOf(difficultyStr)
+                } catch (_: Exception) {
+                    Difficulty.MEDIUM
                 }
-            )
-        }
+                val gameId = if (gameIdArg == -1L) null else gameIdArg
 
-        composable(
-            route = "game/{difficulty}?gameId={gameId}",
-            arguments = listOf(
-                navArgument("difficulty") { type = NavType.StringType },
-                navArgument("gameId") {
-                    type = NavType.LongType
-                    defaultValue = -1L
-                }
-            )
-        ) { backStackEntry ->
-            val difficultyStr = backStackEntry.arguments?.getString("difficulty") ?: "MEDIUM"
-            val gameIdArg = backStackEntry.arguments?.getLong("gameId") ?: -1L
+                SudokuGameScreen(
+                    difficulty = difficulty,
+                    gameId = gameId,
+                    onBack = { navController.popBackStack() },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
 
-            val difficulty = try { Difficulty.valueOf(difficultyStr) } catch (_: Exception) { Difficulty.MEDIUM }
-            val gameId = if (gameIdArg == -1L) null else gameIdArg
+            composable(
+                route = "settings/{category}",
+                arguments = listOf(navArgument("category") { type = NavType.StringType }),
 
-            SudokuGameScreen(
-                difficulty = difficulty,
-                gameId = gameId,
-                onBack = { navController.popBackStack() },
-                modifier = Modifier.fillMaxSize()
-            )
-        }
+                ) { backStackEntry ->
+                val categoryStr = backStackEntry.arguments?.getString("category")
+                val category = SettingsCategory.entries.find { it.name == categoryStr }
 
-        composable(
-            route = "settings/{category}",
-            arguments = listOf(navArgument("category") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val categoryStr = backStackEntry.arguments?.getString("category")
-            val category = SettingsCategory.entries.find { it.name == categoryStr }
+                val onBack: () -> Unit = { navController.popBackStack() }
+                val modifier = Modifier.fillMaxSize()
 
-            val onBack: () -> Unit = { navController.popBackStack() }
-            val modifier = Modifier.fillMaxSize()
-
-            if (category != null) {
-                // Determine specific settings screen
-                when (category) {
-                    SettingsCategory.APPEARANCE -> AppearanceSettingsScreen(onBack, modifier)
-                    SettingsCategory.GAME -> GameSettingsScreen(onBack, modifier)
-                    SettingsCategory.ASSISTANCE -> AssistanceSettingsScreen(onBack, modifier)
-                    SettingsCategory.FILES -> FilesSettingsScreen(onBack, modifier)
-                    SettingsCategory.LANGUAGE -> LanguageSettingsScreen(onBack, modifier)
-                    SettingsCategory.ABOUT -> AboutSettingsScreen(onBack, modifier)
+                if (category != null) {
+                    // Determine specific settings screen
+                    when (category) {
+                        SettingsCategory.APPEARANCE -> AppearanceSettingsScreen(onBack, modifier)
+                        SettingsCategory.GAME -> GameSettingsScreen(onBack, modifier)
+                        SettingsCategory.ASSISTANCE -> AssistanceSettingsScreen(onBack, modifier)
+                        SettingsCategory.FILES -> FilesSettingsScreen(onBack, modifier)
+                        SettingsCategory.LANGUAGE -> LanguageSettingsScreen(onBack, modifier)
+                        SettingsCategory.ABOUT -> AboutSettingsScreen(onBack, modifier)
+                    }
                 }
             }
+            composable(
+                route = "info",
+            ) {
+                InfoScreen(
+                    modifier = Modifier.fillMaxSize()
+                )
+
+            }
+
+
         }
     }
 }
@@ -170,14 +240,7 @@ fun HomeScreen(
             targetState = currentDestination,
             label = "main_nav_transition",
             transitionSpec = {
-                val duration = 400
-                if (targetState.ordinal > initialState.ordinal) {
-                    (slideInHorizontally(animationSpec = tween(duration)) { it } + fadeIn(animationSpec = tween(duration))) togetherWith
-                        (slideOutHorizontally(animationSpec = tween(duration)) { -it/4 } + fadeOut(animationSpec = tween(duration)))
-                } else {
-                    (slideInHorizontally(animationSpec = tween(duration)) { -it } + fadeIn(animationSpec = tween(duration))) togetherWith
-                        (slideOutHorizontally(animationSpec = tween(duration)) { it/4 } + fadeOut(animationSpec = tween(duration)))
-                }
+                EnterTransition.None togetherWith ExitTransition.None
             }
         ) { targetScreen ->
             when (targetScreen) {
@@ -211,18 +274,3 @@ enum class AppDestinations(
     SETTINGS("Setting", Icons.Default.Settings),
 }
 
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    SudokuSolverTheme {
-        Greeting("Android")
-    }
-}
