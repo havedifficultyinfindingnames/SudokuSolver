@@ -3,6 +3,9 @@ package com.galaxyrio.sudokusolver.ui.screen
 import android.annotation.SuppressLint
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -87,10 +90,12 @@ data class SavedGame(
 
 @OptIn(
     ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class,
-    ExperimentalMaterial3ExpressiveApi::class
+    ExperimentalMaterial3ExpressiveApi::class, ExperimentalSharedTransitionApi::class
 )
 @Composable
 fun PlayMenuScreen(
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     modifier: Modifier = Modifier,
     initialDifficulty: Difficulty = Difficulty.MEDIUM,
     onStartGame: (Difficulty) -> Unit,
@@ -167,11 +172,17 @@ fun PlayMenuScreen(
                         contentColor = MaterialTheme.colorScheme.onErrorContainer
                     )
                 } else {
-                    ExtendedFloatingActionButton(
-                        onClick = { onStartGame(difficulty) },
-                        icon = { Icon(Icons.Filled.Add, "Start New Game") },
-                        text = { Text(text = "New Game") },
-                    )
+                    with(sharedTransitionScope) {
+                        ExtendedFloatingActionButton(
+                            modifier = Modifier.sharedBounds(
+                                rememberSharedContentState(key = "game_container"),
+                                animatedVisibilityScope = animatedVisibilityScope,
+                            ),
+                            onClick = { onStartGame(difficulty) },
+                            icon = { Icon(Icons.Filled.Add, "Start New Game") },
+                            text = { Text(text = "New Game") },
+                        )
+                    }
                 }
             }
         }

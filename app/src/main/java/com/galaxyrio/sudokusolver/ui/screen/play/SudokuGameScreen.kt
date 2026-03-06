@@ -1,6 +1,9 @@
 package com.galaxyrio.sudokusolver.ui.screen.play
 
 import android.annotation.SuppressLint
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -71,10 +74,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 fun SudokuGameScreen(
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     difficulty: Difficulty,
     gameId: Long? = null,
     onBack: () -> Unit,
@@ -253,184 +258,196 @@ fun SudokuGameScreen(
     // Interaction source for the background click to avoid ripple effect if desired
     val interactionSource = remember { MutableInteractionSource() }
 
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        topBar = {
-            Column(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                TopAppBar(
-                    title = {
-                        Text("Sudoku")
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back"
+    with(sharedTransitionScope) {
+        val scaffoldModifier = if (gameId == null) {
+            modifier
+                .fillMaxSize()
+                .sharedBounds(
+                    rememberSharedContentState(key = "game_container"),
+                    animatedVisibilityScope = animatedVisibilityScope,
+                )
+        } else {
+            modifier.fillMaxSize()
+        }
+
+        Scaffold(
+            modifier = scaffoldModifier,
+            topBar = {
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    TopAppBar(
+                        title = {
+                            Text("Sudoku")
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = onBack) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Back"
                             )
                         }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        )
                     )
-                )
 
-                Row(
-                    modifier = Modifier
-                        .padding(bottom = 8.dp)
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = difficulty.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Start,
-                        modifier = Modifier.padding(start = 20.dp)
-                    )
-                    Text(
-                        text = formatTime(timeSpentSeconds),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.End,
-                        modifier = Modifier.padding(end = 20.dp)
-                    )
-                }
-            }
-        },
-        bottomBar = {
-            BottomAppBar(
-                actions = {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        modifier = Modifier
+                            .padding(bottom = 8.dp)
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier.weight(1f),
-                            contentAlignment = Alignment.Center
+                        Text(
+                            text = difficulty.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Start,
+                            modifier = Modifier.padding(start = 20.dp)
+                        )
+                        Text(
+                            text = formatTime(timeSpentSeconds),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.End,
+                            modifier = Modifier.padding(end = 20.dp)
+                        )
+                    }
+                }
+            },
+            bottomBar = {
+                BottomAppBar(
+                    actions = {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            ToolbarActionButton(
-                                onClick = { undo() },
-                                icon = Icons.AutoMirrored.Filled.Undo,
-                                contentDescription = "Undo"
+                            Box(
+                                modifier = Modifier.weight(1f),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                ToolbarActionButton(
+                                    onClick = { undo() },
+                                    icon = Icons.AutoMirrored.Filled.Undo,
+                                    contentDescription = "Undo"
                             )
-                        }
-                        Box(
-                            modifier = Modifier.weight(1f),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            ToolbarActionButton(
-                                onClick = {
-                                    if (selectedRow != null && selectedCol != null) {
-                                        val row = selectedRow!!
-                                        val col = selectedCol!!
-                                        val currentCell = sudoku.getCell(row, col)
+                            }
+                            Box(
+                                modifier = Modifier.weight(1f),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                ToolbarActionButton(
+                                    onClick = {
+                                        if (selectedRow != null && selectedCol != null) {
+                                            val row = selectedRow!!
+                                            val col = selectedCol!!
+                                            val currentCell = sudoku.getCell(row, col)
 
-                                        if (!currentCell.isFixed) {
-                                            if (currentCell.value != 0 || currentCell.candidates.isNotEmpty()) {
-                                                updateSudoku(sudoku.setCell(row, col, 0))
+                                            if (!currentCell.isFixed) {
+                                                if (currentCell.value != 0 || currentCell.candidates.isNotEmpty()) {
+                                                    updateSudoku(sudoku.setCell(row, col, 0))
+                                                }
                                             }
                                         }
-                                    }
-                                },
-                                icon = Icons.AutoMirrored.Filled.Backspace,
-                                contentDescription = "Delete"
+                                    },
+                                    icon = Icons.AutoMirrored.Filled.Backspace,
+                                    contentDescription = "Delete"
                             )
-                        }
-                        // Edit Button
-                        Box(
-                            modifier = Modifier.weight(1f),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            ToolbarActionButton(
-                                onClick = { isNoteMode = !isNoteMode },
-                                icon = Icons.Default.Edit,
-                                contentDescription = "Note Mode",
-                                isSelected = isNoteMode
-                            )
-                        }
-                        Box(
-                            modifier = Modifier.weight(1f),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            ToolbarActionButton(
-                                onClick = {
-                                    updateSudoku(
-                                        com.galaxyrio.sudokusolver.game.generator.CandidateCalculator.calculateAllCandidates(
-                                            sudoku
+                            }
+                            // Edit Button
+                            Box(
+                                modifier = Modifier.weight(1f),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                ToolbarActionButton(
+                                    onClick = { isNoteMode = !isNoteMode },
+                                    icon = Icons.Default.Edit,
+                                    contentDescription = "Note Mode",
+                                    isSelected = isNoteMode
+                                )
+                            }
+                            Box(
+                                modifier = Modifier.weight(1f),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                ToolbarActionButton(
+                                    onClick = {
+                                        updateSudoku(
+                                            com.galaxyrio.sudokusolver.game.generator.CandidateCalculator.calculateAllCandidates(
+                                                sudoku
+                                            )
                                         )
-                                    )
-                                },
-                                icon = Icons.Default.AutoAwesome,
-                                contentDescription = "Auto Candidates"
+                                    },
+                                    icon = Icons.Default.AutoAwesome,
+                                    contentDescription = "Auto Candidates"
                             )
+                            }
+                            Box(
+                                modifier = Modifier.weight(1f),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                ToolbarActionButton(
+                                    onClick = {
+                                        showBottomSheet = true
+                                    },
+                                    icon = Icons.Default.Lightbulb,
+                                    contentDescription = "Hint"
+                            )
+                            }
                         }
-                        Box(
-                            modifier = Modifier.weight(1f),
-                            contentAlignment = Alignment.Center
+                    }
+                )
+            }
+        ) { paddingValues ->
+            if (showWinDialog) {
+                AlertDialog(
+                    onDismissRequest = { showWinDialog = false },
+                    title = { Text(text = "Well Done!") },
+                    text = { Text(text = "You have successfully solved the Sudoku puzzle.") },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                showWinDialog = false
+                                onBack()
+                            }
                         ) {
-                            ToolbarActionButton(
-                                onClick = {
-                                    showBottomSheet = true
-                                },
-                                icon = Icons.Default.Lightbulb,
-                                contentDescription = "Hint"
-                            )
+                            Text("Awesome")
                         }
                     }
-                }
-            )
-        }
-    ) { paddingValues ->
-        if (showWinDialog) {
-            AlertDialog(
-                onDismissRequest = { showWinDialog = false },
-                title = { Text(text = "Well Done!") },
-                text = { Text(text = "You have successfully solved the Sudoku puzzle.") },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            showWinDialog = false
-                            onBack()
-                        }
-                    ) {
-                        Text("Awesome")
-                    }
-                }
-            )
-        }
+                )
+            }
 
-        BoxWithConstraints(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentAlignment = Alignment.TopCenter
-        ) {
-            val screenWidth = maxWidth
-
-            val boardHeight = screenWidth - 32.dp
-
-            Column(
-                modifier = Modifier.fillMaxSize()
+            BoxWithConstraints(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.TopCenter
             ) {
-                // Board Area
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(boardHeight)
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
+                val screenWidth = maxWidth
+
+                val boardHeight = screenWidth - 32.dp
+
+                Column(
+                    modifier = Modifier.fillMaxSize()
                 ) {
-                    SudokuBoard(
-                        sudoku = sudoku,
-                        onCellClick = { row, col ->
-                            if (selectedRow == row && selectedCol == col) {
-                                selectedRow = null
-                                selectedCol = null
+                    // Board Area
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(boardHeight)
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        SudokuBoard(
+                            sudoku = sudoku,
+                            onCellClick = { row, col ->
+                                if (selectedRow == row && selectedCol == col) {
+                                    selectedRow = null
+                                    selectedCol = null
                             } else {
                                 selectedRow = row
                                 selectedCol = col
@@ -565,6 +582,7 @@ fun SudokuGameScreen(
             )
         }
     }
+}
 }
 
 @Composable
