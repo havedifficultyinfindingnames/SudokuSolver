@@ -4,12 +4,10 @@ import android.annotation.SuppressLint
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.SharedTransitionScope.PlaceholderSize.Companion.AnimatedSize
 import androidx.compose.animation.SharedTransitionScope.ResizeMode.Companion.RemeasureToBounds
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -27,6 +25,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
@@ -62,7 +61,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -134,7 +132,8 @@ fun PlayMenuScreen(
                     Text(
                         if (isSelectionMode) "${selectedGameIds.size} Selected" else "Sudoku",
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(start = 4.dp)
                     )
                 },
                 scrollBehavior = scrollBehavior,
@@ -210,157 +209,163 @@ fun PlayMenuScreen(
                 }
             }
 
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal =16.dp),
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
 
-            verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
-        ) {
-            item {
-                Text(
-                    text = "Recent Games",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier
-                        .padding(vertical = 8.dp)
-                        .padding(start = 4.dp)
-                )
-            }
-            with(sharedTransitionScope){
-
-
-            if (filteredSavedGames.isEmpty()) {
+                verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
+            ) {
                 item {
-                    OutlinedCard(
+                    Text(
+                        text = "Recent Games",
+                        style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        colors = CardDefaults.outlinedCardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                        )
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(24.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "No saved games found for ${difficulty.name}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            .padding(vertical = 8.dp)
+                            .padding(start = 4.dp)
+                    )
+                }
+                with(sharedTransitionScope) {
+
+
+                    if (filteredSavedGames.isEmpty()) {
+                        item {
+                            OutlinedCard(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                colors = CardDefaults.outlinedCardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
+                                        alpha = 0.3f
+                                    ),
+                                )
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(24.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "No saved games found for ${difficulty.name}",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        items(filteredSavedGames.size) { index ->
+                            val game = filteredSavedGames[index]
+                            val isSelected = game.id in selectedGameIds
+                            val itemKeyContainer = "game_container_${game.id}"
+                            val itemKeyThumbnail = "thumbnail_${game.id}"
+
+                            SegmentedListItem(
+                                onClick = {
+                                    if (isSelectionMode) {
+                                        selectedGameIds = if (isSelected) {
+                                            selectedGameIds - game.id
+                                        } else {
+                                            selectedGameIds + game.id
+                                        }
+                                    } else {
+                                        onContinueGame(game.id)
+                                    }
+                                },
+                                onLongClick = {
+                                    if (!isSelectionMode) {
+                                        selectedGameIds = selectedGameIds + game.id
+                                    }
+                                },
+                                shapes =
+                                    if (isSelected) {
+                                        ListItemDefaults.shapes(MaterialTheme.shapes.large)
+                                    } else {
+                                        ListItemDefaults.segmentedShapes(
+                                            index = index,
+                                            count = filteredSavedGames.size
+                                        )
+                                    },
+                                content = { Text(game.date) },
+                                supportingContent = {
+                                    Column(
+                                        verticalArrangement = Arrangement.spacedBy(0.dp)
+                                    ) {
+
+                                        Text(formatSecondsToTime(game.timeSpentSeconds))
+                                        Text("${game.emptyRemains} numbers left")
+                                    }
+
+                                },
+                                leadingContent = {
+                                    val cornerRadius = if (isSelected) 12.dp else 4.dp
+                                    SudokuThumbnail(
+                                        board = game.board,
+                                        cornerRadius = cornerRadius,
+                                        modifier = Modifier
+                                            .size(64.dp)
+                                            .sharedBounds(
+                                                rememberSharedContentState(key = itemKeyThumbnail),
+                                                resizeMode = RemeasureToBounds,
+
+                                                animatedVisibilityScope = animatedVisibilityScope,
+                                            )
+
+                                    )
+
+                                },
+                                trailingContent = {
+                                    Box(
+                                        modifier = Modifier
+                                            .height(64.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (!isSelectionMode) {
+                                            Icon(
+                                                imageVector = Icons.Default.PlayArrow,
+                                                contentDescription = "Resume"
+                                            )
+                                        }
+                                        if (isSelected) {
+
+                                            Icon(
+                                                imageVector = Icons.Filled.CheckCircle,
+                                                contentDescription = "Selected",
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+
+
+                                        }
+                                    }
+
+
+                                },
+                                colors =
+                                    if (isSelected) {
+                                        ListItemDefaults.colors(
+                                            containerColor = MaterialTheme.colorScheme.secondaryContainer
+                                        )
+                                    } else {
+                                        ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
+                                    },
+                                modifier = Modifier
+                                    .sharedBounds(
+                                        rememberSharedContentState(key = itemKeyContainer),
+                                        animatedVisibilityScope = animatedVisibilityScope,
+                                        resizeMode = RemeasureToBounds,
+                                        placeholderSize = AnimatedSize,
+
+                                        )
                             )
                         }
                     }
-                }
-            } else {
-                items(filteredSavedGames.size) { index ->
-                    val game = filteredSavedGames[index]
-                    val isSelected = game.id in selectedGameIds
-                    val itemKeyContainer = "game_container_${game.id}"
-                    val itemKeyThumbnail = "thumbnail_${game.id}"
 
-                    SegmentedListItem(
-                        onClick = {
-                            if (isSelectionMode) {
-                                selectedGameIds = if (isSelected) {
-                                    selectedGameIds - game.id
-                                } else {
-                                    selectedGameIds + game.id
-                                }
-                            } else {
-                                onContinueGame(game.id)
-                            }
-                        },
-                        onLongClick = {
-                            if (!isSelectionMode) {
-                                selectedGameIds = selectedGameIds + game.id
-                            }
-                        },
-                        shapes =
-                            if (isSelected) {
-                                ListItemDefaults.shapes(MaterialTheme.shapes.large)
-                            } else {
-                                ListItemDefaults.segmentedShapes(
-                                    index = index,
-                                    count = filteredSavedGames.size
-                                )
-                            },
-                        content = { Text(game.date) },
-                        supportingContent = {
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(0.dp)
-                            ) {
-
-                                Text(formatSecondsToTime(game.timeSpentSeconds))
-                                Text("${game.emptyRemains} numbers left")
-                            }
-
-                        },
-                        leadingContent = {
-                            val cornerRadius = if (isSelected) 12.dp else 4.dp
-                                SudokuThumbnail(
-                                    board = game.board,
-                                    cornerRadius = cornerRadius,
-                                    modifier = Modifier.size(64.dp)
-                                            .sharedBounds(
-                                            rememberSharedContentState(key = itemKeyThumbnail),
-                                                resizeMode = RemeasureToBounds,
-                                    animatedVisibilityScope = animatedVisibilityScope,)
-
-                                )
-
-                        },
-                        trailingContent = {
-                            Box(
-                                modifier = Modifier
-                                    .height(64.dp),
-                                contentAlignment = Alignment.Center
-                            ){
-                                if (!isSelectionMode) {
-                                    Icon(
-                                        imageVector = Icons.Default.PlayArrow,
-                                        contentDescription = "Resume"
-                                    )
-                                }
-                                if (isSelected) {
-
-                                    Icon(
-                                        imageVector = Icons.Filled.CheckCircle,
-                                        contentDescription = "Selected",
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-
-
-                                }
-                            }
-
-
-                        },
-                        colors =
-                            if (isSelected) {
-                                ListItemDefaults.colors(
-                                    containerColor = MaterialTheme.colorScheme.secondaryContainer
-                                )
-                            } else {
-                                ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
-                            },
-                        modifier = Modifier
-                            .sharedBounds(
-                            rememberSharedContentState(key = itemKeyContainer),
-                            animatedVisibilityScope = animatedVisibilityScope,
-                                resizeMode = RemeasureToBounds,
-                        ),
-
-                    )
+                    item {
+                        Spacer(modifier = Modifier.height(80.dp)) // Spacing for FAB
+                    }
                 }
             }
-
-            item {
-                Spacer(modifier = Modifier.height(80.dp)) // Spacing for FAB
-            }
-            }
-        }
         }
     }
 }
