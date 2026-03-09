@@ -221,6 +221,8 @@ fun PlayMenuScreen(
                         .padding(start = 4.dp)
                 )
             }
+            with(sharedTransitionScope){
+
 
             if (filteredSavedGames.isEmpty()) {
                 item {
@@ -250,6 +252,7 @@ fun PlayMenuScreen(
                 items(filteredSavedGames.size) { index ->
                     val game = filteredSavedGames[index]
                     val isSelected = game.id in selectedGameIds
+                    val itemKey = "game_container_${game.id}"
 
                     SegmentedListItem(
                         onClick = {
@@ -330,13 +333,19 @@ fun PlayMenuScreen(
                                 )
                             } else {
                                 ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
-                            }
+                            },
+                        modifier = Modifier.sharedBounds(
+                            rememberSharedContentState(key = itemKey),
+                            animatedVisibilityScope = animatedVisibilityScope,
+                        ),
+
                     )
                 }
             }
 
             item {
                 Spacer(modifier = Modifier.height(80.dp)) // Spacing for FAB
+            }
             }
         }
         }
@@ -410,3 +419,4 @@ fun formatSecondsToTime(totalSeconds: Long): String {
     return String.format("%02d:%02d:%02d", hours, minutes, seconds)
 
 }
+

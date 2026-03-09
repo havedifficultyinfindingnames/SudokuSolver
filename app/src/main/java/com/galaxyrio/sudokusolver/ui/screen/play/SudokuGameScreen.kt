@@ -259,19 +259,10 @@ fun SudokuGameScreen(
     val interactionSource = remember { MutableInteractionSource() }
 
     with(sharedTransitionScope) {
-        val scaffoldModifier = if (gameId == null) {
-            modifier
-                .fillMaxSize()
-                .sharedBounds(
-                    rememberSharedContentState(key = "game_container"),
-                    animatedVisibilityScope = animatedVisibilityScope,
-                )
-        } else {
-            modifier.fillMaxSize()
-        }
+
 
         Scaffold(
-            modifier = scaffoldModifier,
+            modifier = Modifier,
             topBar = {
                 Column(
                     modifier = Modifier.fillMaxWidth()
@@ -421,10 +412,26 @@ fun SudokuGameScreen(
                 )
             }
 
-            BoxWithConstraints(
-                modifier = Modifier
+            val backgroundModifier = if (gameId != null) {
+                Modifier
                     .fillMaxSize()
-                    .padding(paddingValues),
+                    .padding(paddingValues)
+                    .sharedBounds(
+                        rememberSharedContentState(key = "game_container_$gameId"),
+                        animatedVisibilityScope = animatedVisibilityScope,
+                    )
+            } else {
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .sharedBounds(
+                        rememberSharedContentState(key = "game_container"),
+                        animatedVisibilityScope = animatedVisibilityScope,
+                    )
+
+            }
+            BoxWithConstraints(
+                modifier = backgroundModifier,
                 contentAlignment = Alignment.TopCenter
             ) {
                 val screenWidth = maxWidth
@@ -488,7 +495,8 @@ fun SudokuGameScreen(
                                     selectedCol!!
                                 ).value.takeIf { it != 0 }
                             } else null,
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.fillMaxSize(),
+
                     )
                 }
 
