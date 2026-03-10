@@ -49,20 +49,30 @@ fun SudokuSolverTheme(
     paletteStyle: PaletteStyle = PaletteStyle.TonalSpot,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+    if (dynamicColor) {
+        val context = LocalContext.current
+        val colorScheme = if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            motionScheme = MotionScheme.expressive(),
+            content = content
+        )
+    } else {
+        DynamicMaterialTheme(
+            seedColor = colorSeed,
+            isDark = darkTheme,
+            style = paletteStyle,
+            isAmoled = amoled,
+            typography = Typography,
+            content = {
+                MaterialTheme(
+                    colorScheme = MaterialTheme.colorScheme,
+                    typography = Typography,
+                    motionScheme = MotionScheme.expressive(),
+                    content = content
+                )
+            }
+        )
     }
-
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        motionScheme = MotionScheme.expressive(),
-        content = content
-    )
 }

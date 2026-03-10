@@ -33,20 +33,25 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.galaxyrio.sudokusolver.data.ThemeMode
 import com.galaxyrio.sudokusolver.ui.theme.SudokuSolverTheme
 import com.galaxyrio.sudokusolver.ui.screen.InfoScreen
 import com.galaxyrio.sudokusolver.ui.screen.PlayMenuScreen
@@ -61,14 +66,36 @@ import com.galaxyrio.sudokusolver.ui.screen.settings.AssistanceSettingsScreen
 import com.galaxyrio.sudokusolver.ui.screen.settings.FilesSettingsScreen
 import com.galaxyrio.sudokusolver.ui.screen.settings.LanguageSettingsScreen
 import com.galaxyrio.sudokusolver.ui.screen.settings.AboutSettingsScreen
+import com.galaxyrio.sudokusolver.ui.viewmodel.SettingsViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        val settingsViewModel = ViewModelProvider(this)[SettingsViewModel::class.java]
+
         setContent {
-            SudokuSolverTheme {
-                SudokuSolverApp()
+            val themeMode by settingsViewModel.themeMode.collectAsState()
+            val themeColor by settingsViewModel.themeColor.collectAsState()
+            val isAmoled by settingsViewModel.isAmoled.collectAsState()
+            val useDynamicColors by settingsViewModel.useDynamicColors.collectAsState()
+            val paletteStyle by settingsViewModel.paletteStyle.collectAsState()
+
+            val darkTheme = when(themeMode) {
+                ThemeMode.SYSTEM -> isSystemInDarkTheme()
+                ThemeMode.DARK -> true
+                ThemeMode.LIGHT -> false
+            }
+
+            SudokuSolverTheme(
+                darkTheme = darkTheme,
+                dynamicColor = useDynamicColors,
+                amoled = isAmoled,
+                colorSeed = themeColor,
+                paletteStyle = paletteStyle
+            ) {
+                SudokuSolverApp(settingsViewModel)
             }
         }
     }
@@ -77,7 +104,9 @@ class MainActivity : ComponentActivity() {
 @PreviewScreenSizes
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalSharedTransitionApi::class)
 @Composable
-fun SudokuSolverApp() {
+fun SudokuSolverApp(
+    settingsViewModel: SettingsViewModel = viewModel()
+) {
     val navController = rememberNavController()
     val motionScheme = MaterialTheme.motionScheme
     Surface(
@@ -199,7 +228,7 @@ fun SudokuSolverApp() {
                     if (category != null) {
                         // Determine specific settings screen
                         when (category) {
-                            SettingsCategory.APPEARANCE -> AppearanceSettingsScreen(onBack, modifier)
+                            SettingsCategory.APPEARANCE -> AppearanceSettingsScreen(onBack, settingsViewModel, modifier)
                             SettingsCategory.GAME -> GameSettingsScreen(onBack, modifier)
                             SettingsCategory.ASSISTANCE -> AssistanceSettingsScreen(onBack, modifier)
                             SettingsCategory.FILES -> FilesSettingsScreen(onBack, modifier)
